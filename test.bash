@@ -1,4 +1,4 @@
-curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d0b52f14-0ca3-4b44-94bb-e901d034045b' \
+curl 'AIzaSyAV9X2Av3VdXOaYlkDmIpwijaStgL3pdBk' \
    -H 'Content-Type: application/json' \
    -d '
    {
