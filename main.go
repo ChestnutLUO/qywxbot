@@ -228,7 +228,7 @@ func manageCertificate() {
 		log.Fatal(err)
 	}
 
-	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer(config.ListenAddress, ""))
+	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer(config.Domain+":80", ""))
 	if err != nil {
 		log.Fatal(err)
 	}
