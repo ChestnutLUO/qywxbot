@@ -2,19 +2,40 @@ package main
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/registration"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type Config struct {
+	ListenAddress string `json:"listen_address"`
+	CertFile      string `json:"cert_file"`
+	KeyFile       string `json:"key_file"`
+	Domain        string `json:"domain"`
+	EmailForACME  string `json:"email_for_acme"`
+}
+
+
 
 
 type SendMessageRequest struct {
@@ -95,6 +116,8 @@ type CardAction struct {
 
 var db *sql.DB
 var tmpl *template.Template
+var config Config
+
 
 type Bot struct {
 	ID  int
@@ -102,6 +125,9 @@ type Bot struct {
 }
 
 func main() {
+	loadConfig()
+	manageCertificate()
+
 	var err error
 	db, err = sql.Open("sqlite3", "./bots.db")
 	if err != nil {
@@ -117,9 +143,165 @@ func main() {
 	http.HandleFunc("/send", sendHandler)
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/sendfile", sendfileHandler)
-	log.Println("服务器正在端口 8080 启动...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+
+	if config.CertFile != "" && config.KeyFile != "" {
+		log.Printf("HTTPS 服务器正在 %s 启动...", config.ListenAddress)
+		log.Fatal(http.ListenAndServeTLS(config.ListenAddress, config.CertFile, config.KeyFile, nil))
+	} else {
+		log.Printf("HTTP 服务器正在 %s 启动...", config.ListenAddress)
+		log.Fatal(http.ListenAndServe(config.ListenAddress, nil))
+	}
 }
+
+func loadConfig() {
+	file, err := os.Open("config.json")
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Println("配置文件 config.json 未找到，正在创建默认配置...")
+			config.ListenAddress = ":8080"
+			config.CertFile = ""
+			config.KeyFile = ""
+			config.Domain = ""
+			config.EmailForACME = ""
+			file, err := os.Create("config.json")
+			if err != nil {
+				log.Fatalf("创建配置文件失败: %v", err)
+			}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			if err := encoder.Encode(config); err != nil {
+				log.Fatalf("写入默认配置失败: %v", err)
+			}
+			log.Println("默认配置文件 config.json 创建成功。")
+			return
+		}
+		log.Fatalf("打开配置文件失败: %v", err)
+	}
+	defer file.Close()
+
+	if err := json.NewDecoder(file).Decode(&config); err != nil {
+		log.Fatalf("解析配置文件失败: %v", err)
+	}
+}
+
+// MyUser You'll need a user or account type that implements acme.User
+type MyUser struct {
+	Email        string
+	Registration *registration.Resource
+	key          crypto.PrivateKey
+}
+
+func (u *MyUser) GetEmail() string {
+	return u.Email
+}
+func (u MyUser) GetRegistration() *registration.Resource {
+	return u.Registration
+}
+func (u *MyUser) GetPrivateKey() crypto.PrivateKey {
+	return u.key
+}
+
+func manageCertificate() {
+	if config.Domain == "" || config.EmailForACME == "" {
+		return
+	}
+
+	// Create a user. New accounts need an email and private key to start.
+	user, err := ensureACMEUser()
+	if err != nil {
+		log.Fatalf("ACME user management failed: %v", err)
+	}
+
+	legoConfig := lego.NewConfig(user)
+
+	// This CA URL is configured for a local dev instance of Boulder running in Docker in a VM.
+	legoConfig.CADirURL = lego.LEDirectoryProduction
+	legoConfig.Certificate.KeyType = certcrypto.RSA2048
+
+	// A client facilitates communication with the CA server.
+	client, err := lego.NewClient(legoConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer(config.ListenAddress, ""))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// New users will need to register
+	if user.GetRegistration() == nil {
+		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			log.Fatal(err)
+		}
+		user.Registration = reg
+	}
+
+	request := certificate.ObtainRequest{
+		Domains: []string{config.Domain},
+		Bundle:  true,
+	}
+	certificates, err := client.Certificate.Obtain(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Each certificate comes back with the cert bytes, the bytes of the client's
+	// private key, and a certificate URL. SAVE THESE TO DISK.
+	certPath := "certs"
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		os.Mkdir(certPath, 0755)
+	}
+
+	err = os.WriteFile(filepath.Join(certPath, config.Domain+".crt"), certificates.Certificate, 0600)
+	if err != nil {
+		log.Fatalf("Failed to write certificate to disk: %v", err)
+	}
+
+	err = os.WriteFile(filepath.Join(certPath, config.Domain+".key"), certificates.PrivateKey, 0600)
+	if err != nil {
+		log.Fatalf("Failed to write private key to disk: %v", err)
+	}
+	config.CertFile = filepath.Join(certPath, config.Domain+".crt")
+	config.KeyFile = filepath.Join(certPath, config.Domain+".key")
+}
+
+func ensureACMEUser() (*MyUser, error) {
+	keyPath := ".acme_user_key"
+	var privateKey *ecdsa.PrivateKey
+	keyBytes, err := os.ReadFile(keyPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			privateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			if err != nil {
+				return nil, err
+			}
+			keyBytes, err = x509.MarshalECPrivateKey(privateKey)
+			if err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(keyPath, keyBytes, 0600); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		privateKey, err = x509.ParseECPrivateKey(keyBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &MyUser{
+		Email: config.EmailForACME,
+		key:   privateKey,
+	}, nil
+}
+
+
 
 func createTable() {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS bots (

@@ -1,0 +1,6 @@
+{
+  "listen_address": ":8080",
+  "cert_file": "",
+  "key_file": "",
+  "domain": ""
+}
