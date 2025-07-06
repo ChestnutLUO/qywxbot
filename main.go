@@ -687,7 +687,7 @@ func getServerURL() string {
 		if config.CertFile != "" && config.KeyFile != "" {
 			return fmt.Sprintf("https://%s", config.Domain)
 		}
-		return fmt.Sprintf("http://%s", config.Domain)
+		return fmt.Sprintf("http://%s%s", config.Domain, config.ListenAddress)
 	}
 	return "http://localhost:8080"
 }
