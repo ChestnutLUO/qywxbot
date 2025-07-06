@@ -30,11 +30,12 @@ import (
 )
 
 type Config struct {
-	ListenAddress string `json:"listen_address"`
-	CertFile      string `json:"cert_file"`
-	KeyFile       string `json:"key_file"`
-	Domain        string `json:"domain"`
-	EmailForACME  string `json:"email_for_acme"`
+	HTTPPort     string `json:"http_port"`     // HTTP端口，如 ":8080" 或 ":80"
+	HTTPSPort    string `json:"https_port"`    // HTTPS端口，如 ":443"
+	CertFile     string `json:"cert_file"`     // SSL证书文件路径
+	KeyFile      string `json:"key_file"`      // SSL私钥文件路径
+	Domain       string `json:"domain"`        // 外部访问域名，如 "example.com"
+	EmailForACME string `json:"email_for_acme"` // ACME证书申请邮箱
 }
 
 
@@ -148,11 +149,11 @@ func main() {
 	http.HandleFunc("/sendfile", sendfileHandler)
 
 	if config.CertFile != "" && config.KeyFile != "" {
-		log.Printf("HTTPS 服务器正在 %s 启动...", config.ListenAddress)
-		log.Fatal(http.ListenAndServeTLS(config.ListenAddress, config.CertFile, config.KeyFile, nil))
+		log.Printf("HTTPS 服务器正在 %s 启动...", config.HTTPSPort)
+		log.Fatal(http.ListenAndServeTLS(config.HTTPSPort, config.CertFile, config.KeyFile, nil))
 	} else {
-		log.Printf("HTTP 服务器正在 %s 启动...", config.ListenAddress)
-		log.Fatal(http.ListenAndServe(config.ListenAddress, nil))
+		log.Printf("HTTP 服务器正在 %s 启动...", config.HTTPPort)
+		log.Fatal(http.ListenAndServe(config.HTTPPort, nil))
 	}
 }
 
@@ -161,7 +162,8 @@ func loadConfig() {
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Println("配置文件 config.json 未找到，正在创建默认配置...")
-			config.ListenAddress = ":8080"
+			config.HTTPPort = ":8080"
+			config.HTTPSPort = ":443"
 			config.CertFile = ""
 			config.KeyFile = ""
 			config.Domain = ""
@@ -228,7 +230,7 @@ func manageCertificate() {
 		log.Fatal(err)
 	}
 
-	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer(config.Domain+":80", ""))
+	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer(":80", ""))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -685,11 +687,19 @@ func insertBot(url, securityCode string) (int64, error) {
 func getServerURL() string {
 	if config.Domain != "" {
 		if config.CertFile != "" && config.KeyFile != "" {
-			return fmt.Sprintf("https://%s", config.Domain)
+			// HTTPS: 如果是443端口则不显示端口号
+			if config.HTTPSPort == ":443" {
+				return fmt.Sprintf("https://%s", config.Domain)
+			}
+			return fmt.Sprintf("https://%s%s", config.Domain, config.HTTPSPort)
 		}
-		return fmt.Sprintf("http://%s%s", config.Domain, config.ListenAddress)
+		// HTTP: 如果是80端口则不显示端口号
+		if config.HTTPPort == ":80" {
+			return fmt.Sprintf("http://%s", config.Domain)
+		}
+		return fmt.Sprintf("http://%s%s", config.Domain, config.HTTPPort)
 	}
-	return "http://localhost:8080"
+	return fmt.Sprintf("http://localhost%s", config.HTTPPort)
 }
 
 func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL string) error {

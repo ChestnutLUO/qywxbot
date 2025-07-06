@@ -20,7 +20,8 @@
 
 ```json
 {
-  "listen_address": ":8080",
+  "http_port": ":8080",
+  "https_port": ":443",
   "cert_file": "",
   "key_file": "",
   "domain": "",
@@ -30,10 +31,11 @@
 
 ### 字段说明
 
-- `listen_address` (必需): 服务器监听的地址和端口 (例如, `:8080` 或 `0.0.0.0:443`)。
+- `http_port` (必需): HTTP 服务器监听的端口 (例如, `:8080` 或 `:80`)。
+- `https_port` (可选): HTTPS 服务器监听的端口 (例如, `:443`)。
 - `cert_file` (可选): 手动 HTTPS ���式下，您的 SSL 证书文件路径 (例如, `certs/mycert.pem`)。
 - `key_file` (可选): 手动 HTTPS 模式下，您的 SSL 私钥文件路径 (例如, `certs/mykey.pem`)。
-- `domain` (可选): 自动 HTTPS 模式下，您希望为其获取证书的域名 (例如, `bot.example.com`)。
+- `domain` (可选): 外部访问域名，用于自动 HTTPS 模式 (例如, `bot.example.com`)。留空则为内网模式。
 - `email_for_acme` (可选): 自动 HTTPS 模式下，用于 Let's Encrypt 注册和通知的电子邮件地址。
 
 ## 运行模式
@@ -42,20 +44,31 @@
 
 ### 1. HTTP 模式 (默认)
 
-这是最简单的模式，适用于本地测试或在反向代理之后运行。
+这是最简单的模式，适用于本地测试、内网使用或在反向代理之后运行。
 
 **配置**:
 确保 `cert_file`, `key_file`, 和 `domain` 字段均为空。
 
+**内网使用示例**:
 ```json
 {
-  "listen_address": ":8080",
+  "http_port": ":8080",
+  "https_port": ":443",
   "cert_file": "",
   "key_file": "",
   "domain": "",
   "email_for_acme": ""
 }
 ```
+
+**访问方式**：
+- 本机访问：`http://localhost:8080`
+- 内网访问：`http://[服务器IP]:8080`
+
+**优点**：
+- 配置简单，无需证书
+- 适合内网开发和测试
+- 避免ACME证书申请的复杂性
 
 ### 2. 手动 HTTPS 模式
 
@@ -66,10 +79,11 @@
 
 ```json
 {
-  "listen_address": ":443",
+  "http_port": ":80",
+  "https_port": ":443",
   "cert_file": "path/to/your/cert.pem",
   "key_file": "path/to/your/key.pem",
-  "domain": "",
+  "domain": "your.domain.com",
   "email_for_acme": ""
 }
 ```
@@ -84,11 +98,12 @@
 - 获取的证书将保存在 `certs/` 目录下。
 
 **配置**:
-填写 `domain` 和 `email_for_acme` 字段。`listen_address` 通常应设置为 `:443`。
+填写 `domain` 和 `email_for_acme` 字段。`https_port` 通常应设置为 `:443`。
 
 ```json
 {
-  "listen_address": ":443",
+  "http_port": ":80",
+  "https_port": ":443",
   "cert_file": "",
   "key_file": "",
   "domain": "your.domain.com",
