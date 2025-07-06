@@ -13,11 +13,13 @@ import (
 	"html/template"
 	"io"
 	"log"
+	mrand "math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
@@ -39,9 +41,10 @@ type Config struct {
 
 
 type SendMessageRequest struct {
-	ID      int    `json:"id"`
-	MsgType string `json:"msgtype"`
-	Content string `json:"content"`
+	ID           int    `json:"id"`
+	SecurityCode string `json:"security_code"`
+	MsgType      string `json:"msgtype"`
+	Content      string `json:"content"`
 }
 
 type WeComTextMessage struct {
@@ -306,7 +309,8 @@ func ensureACMEUser() (*MyUser, error) {
 func createTable() {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS bots (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"url" TEXT
+		"url" TEXT,
+		"security_code" TEXT
 	  );`
 
 	statement, err := db.Prepare(createTableSQL)
@@ -326,29 +330,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 		// Check if the bot already exists
 		var existingID int
-		err := db.QueryRow("SELECT id FROM bots WHERE url = ?", url).Scan(&existingID)
+		var existingCode string
+		err := db.QueryRow("SELECT id, security_code FROM bots WHERE url = ?", url).Scan(&existingID, &existingCode)
 		if err != nil && err != sql.ErrNoRows {
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 			return
 		}
 
 		if existingID != 0 {
-			fmt.Fprintf(w, "该 URL 的机器人已注册，ID 为: %d", existingID)
+			fmt.Fprintf(w, "该 URL 的机器人已注册，ID 为: %d, 安全码为: %s", existingID, existingCode)
 			return
 		}
+		mrand.Seed(time.Now().UnixNano())
+		securityCode := fmt.Sprintf("%03d", mrand.Intn(1000))
 
-		id, err := insertBot(url)
+		id, err := insertBot(url, securityCode)
 		if err != nil {
 			http.Error(w, "机器人注册失败", http.StatusInternalServerError)
 			return
 		}
 
-		err = sendTemplateCardMessage(url, id)
+		err = sendTemplateCardMessage(url, id, securityCode)
 		if err != nil {
 			log.Printf("发送确认消息失败 %s: %v", url, err)
 		}
 
-		fmt.Fprintf(w, "机器人注册成功，ID 为: %d", id)
+		fmt.Fprintf(w, "机器人注册成功，ID 为: %d, 安全码为: %s", id, securityCode)
 		return
 	}
 
@@ -368,10 +375,10 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var botURL string
-	err := db.QueryRow("SELECT url FROM bots WHERE id = ?", req.ID).Scan(&botURL)
+	err := db.QueryRow("SELECT url FROM bots WHERE id = ? AND security_code = ?", req.ID, req.SecurityCode).Scan(&botURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "未找到机器人", http.StatusNotFound)
+			http.Error(w, "未找到机器人或安全码不正确", http.StatusNotFound)
 		} else {
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 		}
@@ -432,16 +439,17 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	botID := r.FormValue("id")
-	if botID == "" {
-		http.Error(w, "机器人 ID 是必填项", http.StatusBadRequest)
+	securityCode := r.FormValue("security_code")
+	if botID == "" || securityCode == "" {
+		http.Error(w, "机器人 ID 和安全码是必填项", http.StatusBadRequest)
 		return
 	}
 
 	var botURL string
-	err := db.QueryRow("SELECT url FROM bots WHERE id = ?", botID).Scan(&botURL)
+	err := db.QueryRow("SELECT url FROM bots WHERE id = ? AND security_code = ?", botID, securityCode).Scan(&botURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "未找到机器人", http.StatusNotFound)
+			http.Error(w, "未找到机器人或安全码不正确", http.StatusNotFound)
 		} else {
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 		}
@@ -509,16 +517,17 @@ func sendfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	botID := r.FormValue("id")
-	if botID == "" {
-		http.Error(w, "机器人 ID 是必填项", http.StatusBadRequest)
+	securityCode := r.FormValue("security_code")
+	if botID == "" || securityCode == "" {
+		http.Error(w, "机器人 ID 和安全码是必填项", http.StatusBadRequest)
 		return
 	}
 
 	var botURL string
-	err := db.QueryRow("SELECT url FROM bots WHERE id = ?", botID).Scan(&botURL)
+	err := db.QueryRow("SELECT url FROM bots WHERE id = ? AND security_code = ?", botID, securityCode).Scan(&botURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "未找到机器人", http.StatusNotFound)
+			http.Error(w, "未找到机器人或安全码不正确", http.StatusNotFound)
 		} else {
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 		}
@@ -622,7 +631,7 @@ func postMessage(url string, payload []byte) error {
 	return nil
 }
 
-func sendTemplateCardMessage(webhookURL string, botID int64) error {
+func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string) error {
 	card := WeComTemplateCardMessage{
 		MsgType: "template_card",
 		TemplateCard: TemplateCard{
@@ -635,11 +644,8 @@ func sendTemplateCardMessage(webhookURL string, botID int64) error {
 				Title: "机器人注册成功",
 				Desc:  "您的机器人已成功在系统中注册",
 			},
-			EmphasisContent: &EmphasisContent{
-				Title: fmt.Sprintf("%d", botID),
-				Desc:  "机器人 ID",
-			},
-			SubTitleText: "感谢您的使用！",
+			EmphasisContent: nil,
+			SubTitleText: fmt.Sprintf("机器人 ID: %d, 安全码: %s。请妥善保管。", botID, securityCode),
 			CardAction: CardAction{
 				Type: 1,
 				URL:  "https://work.weixin.qq.com",
@@ -654,15 +660,13 @@ func sendTemplateCardMessage(webhookURL string, botID int64) error {
 	return postMessage(webhookURL, payload)
 }
 
-
-
-func insertBot(url string) (int64, error) {
-	insertSQL := "INSERT INTO bots(url) VALUES (?)"
+func insertBot(url, securityCode string) (int64, error) {
+	insertSQL := "INSERT INTO bots(url, security_code) VALUES (?, ?)"
 	statement, err := db.Prepare(insertSQL)
 	if err != nil {
 		return 0, err
 	}
-	result, err := statement.Exec(url)
+	result, err := statement.Exec(url, securityCode)
 	if err != nil {
 		return 0, err
 	}

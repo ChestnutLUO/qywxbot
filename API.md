@@ -19,10 +19,10 @@
 ### 响应
 
 - **注册成功:**
-  - **网页:** 页面上会显示 “机器人注册成功，ID 为: [ID]”。
-  - **企业微信:** 对应的机器人会收到一张 “机器人注册成功” 的模板卡片消息，其中包含新注册的机器人 ID。
+  - **网页:** 页面上会显示 “机器人注册成功，ID 为: [ID], 安全码为: [安全码]”。
+  - **企业微信:** 对应的机器人会收到一张 “机器人注册成功” 的模板卡片消息，其中包含新注册的机器人 ID 和安全码。
 - **已注册:**
-  - **网页:** 如果该 Webhook URL 已被注册，页面上会显示 “该 URL 的机器人已注册，ID 为: [ID]”。
+  - **网页:** 如果该 Webhook URL 已被注册，页面上会显示 “该 URL 的机器人已注册，ID 为: [ID], 安全码为: [安全码]”。
 
 ---
 
@@ -36,12 +36,12 @@
 
 ### 请求体
 
-| 参数      | 类型    | 是否必填 | 描述                                       |
-| :-------- | :------ | :------- | :----------------------------------------- |
-| `id`      | Integer | 是       | 要接收消息的机器人的 ID。                  |
-| `msgtype` | String  | 是       | 消息类型，目前支持 `text`、`markdown` 或 `file`。 |
-| `content` | String  | 是       | 消息的具体内容。对于 `file` 类型，此字段应为 `media_id`。                           |
-
+| 参数           | 类型    | 是否必填 | 描述                                       |
+| :------------- | :------ | :------- | :----------------------------------------- |
+| `id`           | Integer | 是       | 要接收消息的机器人的 ID。                  |
+| `security_code`| String  | 是       | 机器人的三位数安全码。                     |
+| `msgtype`      | String  | 是       | 消息类型，目前支持 `text`、`markdown` 或 `file`。 |
+| `content`      | String  | 是       | 消息的具体内容。对于 `file` 类型，此字段应为 `media_id`。                           |
 
 ### 示例请求
 
@@ -52,6 +52,7 @@ curl -X POST http://localhost:8080/send \
 -H "Content-Type: application/json" \
 -d '{
     "id": 1,
+    "security_code": "123",
     "msgtype": "text",
     "content": "这是一条文本测试消息。"
 }'
@@ -64,6 +65,7 @@ curl -X POST http://localhost:8080/send \
 -H "Content-Type: application/json" \
 -d '{
     "id": 1,
+    "security_code": "123",
     "msgtype": "markdown",
     "content": "### 这是一条 Markdown 消息\n> 引用内容\n- 列表项 1\n- 列表项 2\n\n请<font color=\"info\">注意</font>查收。"
 }'
@@ -88,7 +90,7 @@ curl -X POST http://localhost:8080/send \
 - **状态码:** `400 Bad Request`
   - **原因:** 请求体无效或消息类型不被支持。
 - **状态码:** `404 Not Found`
-  - **原因:** 未找到具有指定 `id` ��机器人。
+  - **原因:** 未找到机器人或安全码不正确。
 - **状态码:** `405 Method Not Allowed`
   - **原因:** 使用了非 `POST` 的 HTTP 方法。
 - **状态码:** `500 Internal Server Error`
@@ -113,16 +115,18 @@ curl -X POST http://localhost:8080/send \
 
 ### 表单数据
 
-| 参数    | 类型   | 是否必填 | 描述                |
-| :------ | :----- | :------- | :------------------ |
-| `id`    | String | 是       | 要用于上传的机器人 ID。 |
-| `media` | File   | 是       | 要上传的文件。      |
+| 参数          | 类型   | 是否必填 | 描述                  |
+| :------------ | :----- | :------- | :-------------------- |
+| `id`          | String | 是       | 要用于上传的机器人 ID。   |
+| `security_code` | String | 是       | 机器人的三位数安全码。 |
+| `media`       | File   | 是       | 要上传的文件。        |
 
 ### 示例请求
 
 ```bash
 curl -X POST http://localhost:8080/upload \
 -F "id=1" \
+-F "security_code=123" \
 -F "media=@/path/to/your/file.txt"
 ```
 
@@ -144,6 +148,8 @@ curl -X POST http://localhost:8080/upload \
 ### 失败响应
 
 - **状态码:** `400 Bad Request`
+- **状态码:** `404 Not Found`
+  - **原因:** 未找到机器人或安全码不正确。
 - **状态码:** `500 Internal Server Error`
 
 ---
@@ -158,16 +164,18 @@ curl -X POST http://localhost:8080/upload \
 
 ### 表单数据
 
-| 参数    | 类型   | 是否必填 | 描述                |
-| :------ | :----- | :------- | :------------------ |
-| `id`    | String | 是       | 要用于发送的机器人 ID。 |
-| `media` | File   | 是       | 要发送的文件。      |
+| 参数          | 类型   | 是否必填 | 描述                  |
+| :------------ | :----- | :------- | :-------------------- |
+| `id`          | String | 是       | 要用于发送的机器人 ID。   |
+| `security_code` | String | 是       | 机器人的三位数安全码。 |
+| `media`       | File   | 是       | 要发送的文件。        |
 
 ### 示例请求
 
 ```bash
 curl -X POST http://localhost:8080/sendfile \
 -F "id=1" \
+-F "security_code=123" \
 -F "media=@/path/to/your/file.txt"
 ```
 
@@ -179,12 +187,14 @@ curl -X POST http://localhost:8080/sendfile \
 ```json
 {
     "status": "success",
-    "message": "文件发送成功",
+    "message": "文件��送成功",
     "media_id": "3CEVBKZnCEm4Khu6b-C5fT3e-EfCZ277VmOcbsKNxeqsPQjpCiljPmiREkpcG-TaD"
 }
 ```
 
 ### 失败响应
 
-与 `/upload` 端点类似。
-
+- **状态码:** `400 Bad Request`
+- **状态码:** `404 Not Found`
+  - **原因:** 未找到机器人或安全码不正确。
+- **状态码:** `500 Internal Server Error`
