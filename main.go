@@ -355,6 +355,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("发送确认消息失败 %s: %v", url, err)
 		}
 
+		serverURL := getServerURL()
+		err = sendBotScripts(url, id, securityCode, serverURL)
+		if err != nil {
+			log.Printf("发送脚本文件失败 %s: %v", url, err)
+		}
+
 		fmt.Fprintf(w, "机器人注册成功，ID 为: %d, 安全码为: %s", id, securityCode)
 		return
 	}
@@ -644,8 +650,11 @@ func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string
 				Title: "机器人注册成功",
 				Desc:  "您的机器人已成功在系统中注册",
 			},
-			EmphasisContent: nil,
-			SubTitleText: fmt.Sprintf("机器人 ID: %d, 安全码: %s。请妥善保管。", botID, securityCode),
+			EmphasisContent: &EmphasisContent{
+				Title: fmt.Sprintf("%d", botID),
+				Desc:  "机器人ID",
+			},
+			SubTitleText: fmt.Sprintf("安全码: %s", securityCode),
 			CardAction: CardAction{
 				Type: 1,
 				URL:  "https://work.weixin.qq.com",
@@ -671,4 +680,106 @@ func insertBot(url, securityCode string) (int64, error) {
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+func getServerURL() string {
+	if config.Domain != "" {
+		if config.CertFile != "" && config.KeyFile != "" {
+			return fmt.Sprintf("https://%s", config.Domain)
+		}
+		return fmt.Sprintf("http://%s", config.Domain)
+	}
+	return "http://localhost:8080"
+}
+
+func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL string) error {
+	// 发送 bot.sh 脚本
+	err := sendBotScript(webhookURL, botID, securityCode, serverURL, "bot.sh")
+	if err != nil {
+		return fmt.Errorf("发送 bot.sh 失败: %v", err)
+	}
+
+	// 发送 bot.bat 脚本
+	err = sendBotScript(webhookURL, botID, securityCode, serverURL, "bot.bat")
+	if err != nil {
+		return fmt.Errorf("发送 bot.bat 失败: %v", err)
+	}
+
+	return nil
+}
+
+func sendBotScript(webhookURL string, botID int64, securityCode, serverURL, scriptName string) error {
+	// 读取脚本模板
+	templateContent, err := os.ReadFile(scriptName)
+	if err != nil {
+		return fmt.Errorf("读取脚本模板失败: %v", err)
+	}
+
+	// 替换占位符
+	scriptContent := string(templateContent)
+	scriptContent = strings.ReplaceAll(scriptContent, "{BOT_ID_Template}", fmt.Sprintf("%d", botID))
+	scriptContent = strings.ReplaceAll(scriptContent, "{SECURITY_CODE_Template}", securityCode)
+	scriptContent = strings.ReplaceAll(scriptContent, "{SERVER_URL_Template}", serverURL)
+
+	// 创建临时文件
+	tempFile, err := os.CreateTemp("", fmt.Sprintf("bot_%d.%s", botID, scriptName[4:]))
+	if err != nil {
+		return fmt.Errorf("创建临时文件失败: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+
+	// 写入内容
+	_, err = tempFile.WriteString(scriptContent)
+	if err != nil {
+		return fmt.Errorf("写入临时文件失败: %v", err)
+	}
+	tempFile.Close()
+
+	// 上传文件到企业微信
+	key := strings.Split(webhookURL, "?key=")[1]
+	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", key)
+
+	file, err := os.Open(tempFile.Name())
+	if err != nil {
+		return fmt.Errorf("打开临时文件失败: %v", err)
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("media", fmt.Sprintf("bot_%d%s", botID, filepath.Ext(scriptName)))
+	if err != nil {
+		return fmt.Errorf("创建表单文件失败: %v", err)
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("复制文件内容失败: %v", err)
+	}
+	writer.Close()
+
+	req, err := http.NewRequest("POST", uploadURL, body)
+	if err != nil {
+		return fmt.Errorf("创建上传请求失败: %v", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("上传文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var uploadResp UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&uploadResp); err != nil {
+		return fmt.Errorf("解析上传响应失败: %v", err)
+	}
+
+	if uploadResp.ErrCode != 0 {
+		return fmt.Errorf("文件上传错误: %s", uploadResp.ErrMsg)
+	}
+
+	// 发送文件消息
+	return sendFileMessage(webhookURL, uploadResp.MediaID)
 }

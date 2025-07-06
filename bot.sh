@@ -1,69 +1,72 @@
 #!/bin/bash
 
-# 用于与 qywxbot 服务器交互的简化版命令行工具
+# 机器人配置
+BOT_ID="{BOT_ID_Template}"
+SECURITY_CODE="{SECURITY_CODE_Template}"
+SERVER_URL="{SERVER_URL_Template}"
 
-# 当任何命令失败时立即退出
-set -e
+# 发送消息函数
+send_message() {
+    local msgtype="$1"
+    local content="$2"
 
-# 默认服务器 URL 和机器人 ID
-SERVER_URL="http://localhost:8080"
-DEFAULT_BOT_ID="1" # 在这里设置您的默认机器人 ID
-SECURITY_CODE="YOUR_SECURITY_CODE" # 在这里设置您的安全码
-
-# --- 使用说明函数 ---
-usage() {
-    echo "用法: $0 <command> <argument>"
-    echo ""
-    echo "命令:"
-    echo "  send     <message>      将文本作为 Markdown 消息发送。"
-    echo "  sendfile <file_path>     发送一个文件。"
-    echo ""
-    echo "示例: 从现在起，请使用默认的安全码来发送消息和文件。"
-    echo "  $0 send \"### 新的警告\\n请立即检查系统状态。\""
-    echo "  $0 sendfile ./API.md"
-    echo ""
-    echo "默认机器人 ID 设置为: ${DEFAULT_BOT_ID}"
-    echo "默认安全码设置为: ${SECURITY_CODE}"
-    exit 1
+    curl -X POST "${SERVER_URL}/send" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"id\": ${BOT_ID},
+            \"security_code\": \"${SECURITY_CODE}\",
+            \"msgtype\": \"${msgtype}\",
+            \"content\": \"${content}\"
+        }"
 }
 
-# --- 主脚本 ---
-if [ "$#" -ne 2 ]; then
-    echo "错误: 需要两个参数：一个命令和一个参数。"
-    usage
+# 发送文本消息
+send_text() {
+    send_message "text" "$1"
+}
+
+# 发送Markdown消息
+send_markdown() {
+    send_message "markdown" "$1"
+}
+
+# 上传并发送文件
+send_file() {
+    local filepath="$1"
+
+    if [ ! -f "$filepath" ]; then
+        echo "文件不存在: $filepath"
+        return 1
+    fi
+
+    curl -X POST "${SERVER_URL}/sendfile" \
+        -F "id=${BOT_ID}" \
+        -F "security_code=${SECURITY_CODE}" \
+        -F "media=@${filepath}"
+}
+
+# 使用示例
+if [ $# -eq 0 ]; then
+    echo "使用方法:"
+    echo "  发送文本消息: $0 text \"消息内容\""
+    echo "  发送Markdown: $0 markdown \"**粗体文本**\""
+    echo "  发送文件: $0 file \"/path/to/file.txt\""
+    exit 1
 fi
 
-COMMAND=$1
-ARGUMENT=$2
-
-case $COMMAND in
-    send)
-        # --- 发送 Markdown 消息 ---
-        echo "正在向机器人 ID: ${DEFAULT_BOT_ID} 发送 Markdown 消息..."
-        curl -s -X POST "${SERVER_URL}/send" \
-             -H "Content-Type: application/json" \
-             -d "{\"id\": ${DEFAULT_BOT_ID}, \"security_code\": \"${SECURITY_CODE}\", \"msgtype\": \"markdown\", \"content\": \"${ARGUMENT}\"}"
-        echo
-        echo "消息发送完成。"
+case "$1" in
+    "text")
+        send_text "$2"
         ;;
-
-    sendfile)
-        # --- 发送文件 ---
-        if [ ! -f "$ARGUMENT" ]; then
-            echo "错误: 文件 '$ARGUMENT' 未找到"
-            exit 1
-        fi
-        echo "正在向机器人 ID: ${DEFAULT_BOT_ID} 发送文件 '$ARGUMENT'..."
-        curl -s -X POST "${SERVER_URL}/sendfile" \
-             -F "id=${DEFAULT_BOT_ID}" \
-             -F "security_code=${SECURITY_CODE}" \
-             -F "media=@${ARGUMENT}"
-        echo
-        echo "文件发送完成。"
+    "markdown")
+        send_markdown "$2"
         ;;
-
+    "file")
+        send_file "$2"
+        ;;
     *)
-        echo "错误: 未知命令 '$COMMAND'"
-        usage
+        echo "不支持的消息类型: $1"
+        echo "支持的类型: text, markdown, file"
+        exit 1
         ;;
 esac

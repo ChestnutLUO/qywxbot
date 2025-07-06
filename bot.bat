@@ -5,9 +5,9 @@ rem 用于与 qywxbot 服务器交互的 Windows 批处理脚本
 
 rem --- 配置 ---
 rem 设置默认的服务器 URL 和机器人 ID
-set "SERVER_URL=http://localhost:8080"
-set "DEFAULT_BOT_ID=1"
-set "SECURITY_CODE=YOUR_SECURITY_CODE"
+set "SERVER_URL={SERVER_URL_Template}"
+set "DEFAULT_BOT_ID={BOT_ID_Template}"
+set "SECURITY_CODE={SECURITY_CODE_Template}"
 
 rem --- 使用说明 ---
 :usage
