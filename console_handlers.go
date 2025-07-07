@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 func consoleHandler(w http.ResponseWriter, r *http.Request) {

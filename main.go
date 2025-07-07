@@ -127,9 +127,20 @@ type JumpItem struct {
 
 
 
-var db *sql.DB
-var tmpl *template.Template
-var config Config
+var (
+	db    *sql.DB
+	tmpls *template.Template
+	config Config
+)
+
+type SuccessData struct {
+	ID            int64
+	SecurityCode  string
+	SendURL       string
+	CurlExample   string
+	BotExeExample string
+}
+
 
 
 type Bot struct {
@@ -152,14 +163,15 @@ func main() {
 
 	createTable()
 
-	tmpl = template.Must(template.ParseFiles("templates/index.html"))
+	tmpls = template.Must(template.ParseGlob("templates/*.html"))
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/send", sendHandler)
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/sendfile", sendfileHandler)
 	http.HandleFunc("/console", consoleHandler)
-	http.HandleFunc("/api/bots", botsAPIHandler)
+	http.HandleFunc("/api/bots", botAPIHandler)
+
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	if config.CertFile != "" && config.KeyFile != "" {
@@ -355,7 +367,34 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if existingID != 0 {
-			fmt.Fprintf(w, "该 URL 的机器人已注册，ID 为: %d, 安全码为: %s", existingID, existingCode)
+			// Bot already exists, just show the info page without sending notifications.
+			serverURL := getServerURL()
+			sendURL := fmt.Sprintf("%s/send", serverURL)
+			curlExample := fmt.Sprintf(`curl -X POST -H "Content-Type: application/json" -d '{"id": %d, "security_code": "%s", "msgtype": "text", "content": "Hello from your bot!"}' %s`, existingID, existingCode, sendURL)
+
+			domain := config.Domain
+			if domain == "" {
+				domain = "localhost"
+			}
+			port := strings.TrimPrefix(config.HTTPPort, ":")
+			if config.CertFile != "" && config.KeyFile != "" {
+				port = strings.TrimPrefix(config.HTTPSPort, ":")
+			}
+
+			botExeExample := fmt.Sprintf(`bot.exe send %s %s %d %s "你的消息"`, domain, port, existingID, existingCode)
+
+			data := SuccessData{
+				ID:            int64(existingID),
+				SecurityCode:  existingCode,
+				SendURL:       sendURL,
+				CurlExample:   curlExample,
+				BotExeExample: botExeExample,
+			}
+
+			err = tmpls.ExecuteTemplate(w, "success.html", data)
+			if err != nil {
+				http.Error(w, "无法呈现成功页面", http.StatusInternalServerError)
+			}
 			return
 		}
 		mrand.Seed(time.Now().UnixNano())
@@ -367,22 +406,56 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		serverAddr := "localhost"
+		if config.Domain != "" {
+			serverAddr = config.Domain
+		}
+		port := config.HTTPPort
+		if config.CertFile != "" && config.KeyFile != "" {
+			port = config.HTTPSPort
+		}
+		port = strings.TrimPrefix(port, ":")
+
 		err = sendTemplateCardMessage(url, id, securityCode)
 		if err != nil {
 			log.Printf("发送确认消息失败 %s: %v", url, err)
 		}
 
+		botExeExampleForMsg := fmt.Sprintf(`bot.exe send %s %s %d %s "来自 bot.exe 的消息"`, serverAddr, port, id, securityCode)
+		winBotMessage := fmt.Sprintf("您也可以在 Windows Terminal 或者 PowerShell 中使用 bot.exe 发送消息。\n```\n%s\n```", botExeExampleForMsg)
+
+		err = sendMarkdownMessage(url, winBotMessage)
+		if err != nil {
+			log.Printf("发送 Windows bot 提醒消息失败 %s: %v", url, err)
+		}
+
 		serverURL := getServerURL()
+		sendURL := fmt.Sprintf("%s/send", serverURL)
+		curlExample := fmt.Sprintf(`curl -X POST -H "Content-Type: application/json" -d '{"id": %d, "security_code": "%s", "msgtype": "text", "content": "Hello from your bot!"}' %s`, id, securityCode, sendURL)
+
+		botExeExample := fmt.Sprintf(`bot.exe send %s %s %d %s "来自 bot.exe 的消息"`, serverAddr, port, id, securityCode)
+
+		data := SuccessData{
+			ID:            id,
+			SecurityCode:  securityCode,
+			SendURL:       sendURL,
+			CurlExample:   curlExample,
+			BotExeExample: botExeExample,
+		}
+
 		err = sendBotScripts(url, id, securityCode, serverURL)
 		if err != nil {
 			log.Printf("发送脚本文件失败 %s: %v", url, err)
 		}
 
-		fmt.Fprintf(w, "机器人注册成功，ID 为: %d, 安全码为: %s", id, securityCode)
+		err = tmpls.ExecuteTemplate(w, "success.html", data)
+		if err != nil {
+			http.Error(w, "无法呈现成功页面", http.StatusInternalServerError)
+		}
 		return
 	}
 
-	tmpl.Execute(w, nil)
+	tmpls.ExecuteTemplate(w, "index.html", nil)
 }
 
 func sendHandler(w http.ResponseWriter, r *http.Request) {
