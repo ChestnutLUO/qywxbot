@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot 脚本使用文档 - 企业微信机器人服务</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #777;
+            margin-top: 20px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007acc;
+        }
+        .script-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .command-box {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #007acc;
+        }
+        .platform {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .linux { background: #fd7e14; }
+        .windows { background: #0d6efd; }
+        .config {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .note {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>Bot 脚本使用文档</h1>
+        
+        <div class="note">
+            <strong>说明：</strong>本文档提供了 <code>bot.sh</code>（适用于 Linux/macOS）和 <code>bot.bat</code>（适用于 Windows）脚本的使用指南，帮助您快速与企业微信机器人服务器进行交互。
+        </div>
+        
+        <h2>脚本获取方式</h2>
+        <div class="success">
+            <p><strong>自动获取：</strong>当您成功注册机器人后，系统会自动生成包含您的机器人 ID 和安全码的脚本文件，并发送到您的企业微信群中。</p>
+            <p><strong>手动配置：</strong>您也可以下载通用脚本模板，手动配置您的机器人信息。</p>
+        </div>
+        
+        <div class="script-section">
+            <h2>1. bot.sh (Linux/macOS)</h2>
+            <span class="platform linux">Linux/macOS</span>
+            
+            <h3>基本用法</h3>
+            <div class="command-box">
+                <code>./bot.sh &lt;命令&gt; &lt;参数&gt;</code>
+            </div>
+            
+            <h3>支持的命令</h3>
+            <table>
+                <tr>
+                    <th>命令</th>
+                    <th>参数</th>
+                    <th>描述</th>
+                </tr>
+                <tr>
+                    <td><code>send</code></td>
+                    <td>&lt;消息内容&gt;</td>
+                    <td>发送 Markdown 格式的文本消息</td>
+                </tr>
+                <tr>
+                    <td><code>sendfile</code></td>
+                    <td>&lt;文件路径&gt;</td>
+                    <td>发送文件到群聊</td>
+                </tr>
+            </table>
+            
+            <h3>使用示例</h3>
+            <h4>发送文本消息</h4>
+            <pre><code># 发送简单文本消息
+./bot.sh send "服务器运行正常"
+
+# 发送 Markdown 格式消息
+./bot.sh send "### 系统警告\n请立即检查系统状态"
+
+# 发送多行消息
+./bot.sh send "### 新警告\n请立即检查系统状态。\n\n> 这是一条重要通知"</code></pre>
+            
+            <h4>发送文件</h4>
+            <pre><code># 发送当前目录下的文件
+./bot.sh sendfile ./API.md
+
+# 发送绝对路径文件
+./bot.sh sendfile /home/user/documents/report.pdf
+
+# 发送日志文件
+./bot.sh sendfile /var/log/system.log</code></pre>
+            
+            <h3>配置信息</h3>
+            <div class="config">
+                <p><strong>默认机器人 ID：</strong> <code>${DEFAULT_BOT_ID}</code></p>
+                <p><strong>默认安全码：</strong> <code>${SECURITY_CODE}</code></p>
+                <p><strong>服务器地址：</strong> <code>${SERVER_URL}</code></p>
+            </div>
+            
+            <h3>权限设置</h3>
+            <pre><code># 给脚本执行权限
+chmod +x bot.sh
+
+# 运行脚本
+./bot.sh send "测试消息"</code></pre>
+        </div>
+        
+        <div class="script-section">
+            <h2>2. bot.bat (Windows)</h2>
+            <span class="platform windows">Windows</span>
+            
+            <h3>基本用法</h3>
+            <div class="command-box">
+                <code>bot.bat &lt;命令&gt; &lt;参数&gt;</code>
+            </div>
+            
+            <h3>支持的命令</h3>
+            <table>
+                <tr>
+                    <th>命令</th>
+                    <th>参数</th>
+                    <th>描述</th>
+                </tr>
+                <tr>
+                    <td><code>send</code></td>
+                    <td>"消息内容"</td>
+                    <td>发送 Markdown 格式的文本消息（需要用引号包围）</td>
+                </tr>
+                <tr>
+                    <td><code>sendfile</code></td>
+                    <td>&lt;文件路径&gt;</td>
+                    <td>发送文件到群聊</td>
+                </tr>
+            </table>
+            
+            <h3>使用示例</h3>
+            <h4>发送文本消息</h4>
+            <pre><code>:: 发送简单文本消息
+bot.bat send "服务器运行正常"
+
+:: 发送 Markdown 格式消息
+bot.bat send "### 系统警告\n请立即检查系统状态"
+
+:: 发送多行消息
+bot.bat send "### 新警告\n请立即检查系统状态。\n\n> 这是一条重要通知"</code></pre>
+            
+            <h4>发送文件</h4>
+            <pre><code>:: 发送当前目录下的文件
+bot.bat sendfile API.md
+
+:: 发送绝对路径文件
+bot.bat sendfile C:\Users\Username\Documents\report.pdf
+
+:: 发送日志文件
+bot.bat sendfile C:\logs\system.log</code></pre>
+            
+            <h3>配置信息</h3>
+            <div class="config">
+                <p><strong>默认机器人 ID：</strong> <code>%DEFAULT_BOT_ID%</code></p>
+                <p><strong>默认安全码：</strong> <code>%SECURITY_CODE%</code></p>
+                <p><strong>服务器地址：</strong> <code>%SERVER_URL%</code></p>
+            </div>
+            
+            <h3>运行方式</h3>
+            <pre><code>:: 在命令提示符中运行
+bot.bat send "测试消息"
+
+:: 在 PowerShell 中运行
+.\bot.bat send "测试消息"</code></pre>
+        </div>
+        
+        <div class="note">
+            <h2>Windows 二进制程序</h2>
+            <p><strong>bot.exe</strong> 是功能更强大的 Windows 二进制程序，提供完整的命令行工具功能。</p>
+            <p>📖 详细使用说明请查看：<a href="/web/windows-binary.html"><strong>Windows 程序文档</strong></a></p>
+        </div>
+        
+        <h2>高级用法</h2>
+        
+        <h3>在自动化脚本中使用</h3>
+        <h4>Linux/macOS Cron 任务</h4>
+        <pre><code># 每小时发送系统状态
+0 * * * * /path/to/bot.sh send "$(date): 系统运行正常"
+
+# 每日发送日志文件
+0 0 * * * /path/to/bot.sh sendfile /var/log/daily.log</code></pre>
+        
+        <h4>Windows 计划任务</h4>
+        <pre><code>:: 在批处理文件中使用
+@echo off
+echo 开始系统检查...
+:: 执行系统检查命令
+systeminfo > system_status.txt
+bot.bat sendfile system_status.txt
+echo 系统状态已发送到企业微信群</code></pre>
+        
+        <h3>错误处理</h3>
+        <div class="warning">
+            <p><strong>注意：</strong>脚本会返回不同的退出码来表示执行结果：</p>
+            <ul>
+                <li><code>0</code>：成功</li>
+                <li><code>1</code>：参数错误</li>
+                <li><code>2</code>：网络错误</li>
+                <li><code>3</code>：文件不存在</li>
+            </ul>
+        </div>
+        
+        <h4>Linux/macOS 错误处理示例</h4>
+        <pre><code>#!/bin/bash
+./bot.sh send "开始备份任务"
+if [ $? -eq 0 ]; then
+    echo "消息发送成功"
+else
+    echo "消息发送失败"
+fi</code></pre>
+        
+        <h4>Windows 错误处理示例</h4>
+        <pre><code>@echo off
+bot.bat send "开始备份任务"
+if %errorlevel% equ 0 (
+    echo 消息发送成功
+) else (
+    echo 消息发送失败
+)</code></pre>
+        
+        <h2>常见问题解答</h2>
+        
+        <h3>Q: 脚本无法执行怎么办？</h3>
+        <div class="note">
+            <p><strong>Linux/macOS：</strong>确保脚本有执行权限：<code>chmod +x bot.sh</code></p>
+            <p><strong>Windows：</strong>确保在命令提示符或 PowerShell 中运行，或者双击运行</p>
+        </div>
+        
+        <h3>Q: 如何修改脚本中的配置？</h3>
+        <p>A: 用文本编辑器打开脚本文件，修改顶部的配置变量：</p>
+        <pre><code># Linux/macOS (bot.sh)
+DEFAULT_BOT_ID="你的机器人ID"
+SECURITY_CODE="你的安全码"
+SERVER_URL="http://your-server:8080"
+
+# Windows (bot.bat)
+set DEFAULT_BOT_ID=你的机器人ID
+set SECURITY_CODE=你的安全码
+set SERVER_URL=http://your-server:8080</code></pre>
+        
+        <h3>Q: 如何发送包含特殊字符的消息？</h3>
+        <div class="note">
+            <p><strong>Linux/macOS：</strong>使用单引号或转义字符：<code>./bot.sh send 'message with "quotes"'</code></p>
+            <p><strong>Windows：</strong>使用双引号并转义内部引号：<code>bot.bat send "message with \"quotes\""</code></p>
+        </div>
+        
+        <h3>Q: 支持发送哪些类型的文件？</h3>
+        <p>A: 支持企业微信机器人允许的所有文件类型，包括：</p>
+        <ul>
+            <li>文档类：PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX</li>
+            <li>图片类：PNG、JPG、JPEG、GIF</li>
+            <li>压缩包：ZIP、RAR、7Z</li>
+            <li>文本类：TXT、LOG、MD</li>
+            <li>其他：符合企业微信机器人文件大小限制的文件</li>
+        </ul>
+        
+        <h2>最佳实践</h2>
+        
+        <ul>
+            <li>定期检查脚本的执行权限和配置</li>
+            <li>在生产环境中使用时，建议添加错误处理和日志记录</li>
+            <li>合理控制消息发送频率，避免刷屏</li>
+            <li>对于重要的自动化任务，建议同时记录本地日志</li>
+            <li>定期测试脚本功能，确保服务器连接正常</li>
+        </ul>
+    </div>
+</body>
+</html>

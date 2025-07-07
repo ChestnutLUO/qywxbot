@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业微信机器人服务 - 文档</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>企业微信机器人服务文档</h1>
+        
+        <h2>服务概述</h2>
+        <p>这是一个简单的企业微信机器人管理服务，支持：</p>
+        <ul>
+            <li>通过Web界面注册企业微信群机器人</li>
+            <li>通过JSON API发送文本、Markdown和文件消息</li>
+            <li>安全码验证机制保护API调用</li>
+            <li>自动生成调用脚本</li>
+        </ul>
+        
+        <h2>快速开始</h2>
+        <ol>
+            <li>访问 <code>/</code> 页面注册你的企业微信群机器人</li>
+            <li>获取机器人ID和安全码</li>
+            <li>使用API发送消息到群聊</li>
+        </ol>
+        
+        <h2>功能特性</h2>
+        <ul>
+            <li><strong>消息类型支持</strong>：文本、Markdown、文件消息</li>
+            <li><strong>文件上传</strong>：支持上传文件到企业微信并发送</li>
+            <li><strong>安全验证</strong>：每个机器人都有独立的安全码</li>
+            <li><strong>脚本生成</strong>：自动生成Shell和批处理脚本</li>
+            <li><strong>HTTPS支持</strong>：支持ACME自动证书申请</li>
+        </ul>
+        
+        <h2>相关链接</h2>
+        <ul>
+            <li><a href="/web/api.html">API接口文档</a></li>
+            <li><a href="/web/api-usage.html">API使用文档</a> - 详细的API使用指南</li>
+            <li><a href="/web/bot-scripts.html">Bot脚本文档</a> - Shell和批处理脚本使用说明</li>
+            <li><a href="/web/windows-binary.html">Windows程序</a> - Windows二进制程序文档</li>
+            <li><a href="/web/examples.html">API使用示例</a></li>
+            <li><a href="/">注册新机器人</a></li>
+        </ul>
+    </div>
+</body>
+</html>

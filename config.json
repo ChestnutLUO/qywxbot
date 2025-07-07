@@ -1,6 +1,8 @@
 {
-  "listen_address": ":8080",
+  "http_port": ":8080",
+  "https_port": ":443",
   "cert_file": "",
   "key_file": "",
-  "domain": ""
+  "domain": "",
+  "email_for_acme": ""
 }

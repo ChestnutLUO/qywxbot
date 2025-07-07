@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 使用文档 - 企业微信机器人服务</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 25px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007acc;
+        }
+        .endpoint {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #007acc;
+        }
+        .method {
+            font-weight: bold;
+            color: #007acc;
+            display: inline-block;
+            background: #007acc;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+        .url {
+            font-weight: bold;
+            color: #333;
+            font-family: 'Courier New', monospace;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>企业微信机器人 API 使用文档</h1>
+        
+        <div class="info">
+            <strong>说明：</strong>本文档详细介绍了如何使用机器人管理和消息推送 API，包括完整的请求示例和响应说明。
+        </div>
+        
+        <h2>1. 注册机器人</h2>
+        
+        <div class="endpoint">
+            <span class="method">GET/POST</span>
+            <span class="url">/</span>
+            <p>通过网页界面注册新的机器人。</p>
+        </div>
+        
+        <h3>使用方法</h3>
+        <ol>
+            <li>使用浏览器访问服务器的根 URL（例如 <code>http://localhost:8080/</code>）</li>
+            <li>您将看到一个表单，用于输入机器人的 Webhook URL</li>
+            <li>在 "机器人 Webhook URL" 字段中，粘贴您的企业微信机器人的 Webhook 地址</li>
+            <li>点击 "注册" 按钮</li>
+        </ol>
+        
+        <h3>响应说明</h3>
+        
+        <div class="success">
+            <strong>注册成功：</strong>
+            <ul>
+                <li><strong>网页：</strong> 页面上会显示 "机器人注册成功，ID 为: [ID], 安全码为: [安全码]"</li>
+                <li><strong>企业微信：</strong> 对应的机器人会收到一张 "机器人注册成功" 的模板卡片消息，其中包含新注册的机器人 ID 和安全码</li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <strong>已注册：</strong> 如果该 Webhook URL 已被注册，页面上会显示 "该 URL 的机器人已注册，ID 为: [ID], 安全码为: [安全码]"
+        </div>
+        
+        <h2>2. 推送消息</h2>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <span class="url">/send</span>
+            <p>通过 API 向已注册的机器人推送消息。</p>
+        </div>
+        
+        <h3>请求参数</h3>
+        <table>
+            <tr>
+                <th>参数</th>
+                <th>类型</th>
+                <th>必填</th>
+                <th>描述</th>
+            </tr>
+            <tr>
+                <td>id</td>
+                <td>Integer</td>
+                <td>是</td>
+                <td>要接收消息的机器人的 ID</td>
+            </tr>
+            <tr>
+                <td>security_code</td>
+                <td>String</td>
+                <td>是</td>
+                <td>机器人的三位数安全码</td>
+            </tr>
+            <tr>
+                <td>msgtype</td>
+                <td>String</td>
+                <td>是</td>
+                <td>消息类型：text、markdown 或 file</td>
+            </tr>
+            <tr>
+                <td>content</td>
+                <td>String</td>
+                <td>是</td>
+                <td>消息的具体内容。对于 file 类型，此字段应为 media_id</td>
+            </tr>
+        </table>
+        
+        <h3>请求示例</h3>
+        
+        <h4>推送文本消息</h4>
+        <pre><code>curl -X POST http://localhost:8080/send \
+-H "Content-Type: application/json" \
+-d '{
+    "id": 1,
+    "security_code": "123",
+    "msgtype": "text",
+    "content": "这是一条文本测试消息。"
+}'</code></pre>
+        
+        <h4>推送 Markdown 消息</h4>
+        <pre><code>curl -X POST http://localhost:8080/send \
+-H "Content-Type: application/json" \
+-d '{
+    "id": 1,
+    "security_code": "123",
+    "msgtype": "markdown",
+    "content": "### 这是一条 Markdown 消息\n> 引用内容\n- 列表项 1\n- 列表项 2\n\n请<font color=\"info\">注意</font>查收。"
+}'</code></pre>
+        
+        <h3>成功响应</h3>
+        <div class="success">
+            <strong>状态码：</strong> 200 OK<br>
+            <strong>响应内容：</strong>
+            <pre><code>{
+    "status": "success",
+    "message": "消息发送成功"
+}</code></pre>
+        </div>
+        
+        <h3>失败响应</h3>
+        <div class="error">
+            <strong>可能的错误状态码：</strong>
+            <ul>
+                <li><strong>400 Bad Request：</strong> 请求体无效或消息类型不被支持</li>
+                <li><strong>404 Not Found：</strong> 未找到机器人或安全码不正确</li>
+                <li><strong>405 Method Not Allowed：</strong> 使用了非 POST 的 HTTP 方法</li>
+                <li><strong>500 Internal Server Error：</strong> 数据库错误或向企业微信 Webhook 发送消息时失败</li>
+            </ul>
+        </div>
+        
+        <h2>3. 上传文件</h2>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <span class="url">/upload</span>
+            <p>上传文件以获取 media_id，该 ID 可用于通过 /send 端点发送文件消息。</p>
+        </div>
+        
+        <h3>表单参数</h3>
+        <table>
+            <tr>
+                <th>参数</th>
+                <th>类型</th>
+                <th>必填</th>
+                <th>描述</th>
+            </tr>
+            <tr>
+                <td>id</td>
+                <td>String</td>
+                <td>是</td>
+                <td>要用于上传的机器人 ID</td>
+            </tr>
+            <tr>
+                <td>security_code</td>
+                <td>String</td>
+                <td>是</td>
+                <td>机器人的三位数安全码</td>
+            </tr>
+            <tr>
+                <td>media</td>
+                <td>File</td>
+                <td>是</td>
+                <td>要上传的文件</td>
+            </tr>
+        </table>
+        
+        <h3>请求示例</h3>
+        <pre><code>curl -X POST http://localhost:8080/upload \
+-F "id=1" \
+-F "security_code=123" \
+-F "media=@/path/to/your/file.txt"</code></pre>
+        
+        <h3>成功响应</h3>
+        <div class="success">
+            <strong>状态码：</strong> 200 OK<br>
+            <strong>响应内容：</strong>
+            <pre><code>{
+    "errcode": 0,
+    "errmsg": "ok",
+    "type": "file",
+    "media_id": "3a8asd892asd8asd",
+    "created_at": "1380000000"
+}</code></pre>
+        </div>
+        
+        <h2>4. 直接发送文件（一步完成）</h2>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <span class="url">/sendfile</span>
+            <p>此端点将文件的上传和发送合并为一个操作。</p>
+        </div>
+        
+        <h3>表单参数</h3>
+        <table>
+            <tr>
+                <th>参数</th>
+                <th>类型</th>
+                <th>必填</th>
+                <th>描述</th>
+            </tr>
+            <tr>
+                <td>id</td>
+                <td>String</td>
+                <td>是</td>
+                <td>要用于发送的机器人 ID</td>
+            </tr>
+            <tr>
+                <td>security_code</td>
+                <td>String</td>
+                <td>是</td>
+                <td>机器人的三位数安全码</td>
+            </tr>
+            <tr>
+                <td>media</td>
+                <td>File</td>
+                <td>是</td>
+                <td>要发送的文件</td>
+            </tr>
+        </table>
+        
+        <h3>请求示例</h3>
+        <pre><code>curl -X POST http://localhost:8080/sendfile \
+-F "id=1" \
+-F "security_code=123" \
+-F "media=@/path/to/your/file.txt"</code></pre>
+        
+        <h3>成功响应</h3>
+        <div class="success">
+            <strong>状态码：</strong> 200 OK<br>
+            <strong>响应内容：</strong>
+            <pre><code>{
+    "status": "success",
+    "message": "文件发送成功",
+    "media_id": "3CEVBKZnCEm4Khu6b-C5fT3e-EfCZ277VmOcbsKNxeqsPQjpCiljPmiREkpcG-TaD"
+}</code></pre>
+        </div>
+        
+        <h2>常见问题解答</h2>
+        
+        <h3>Q: 如何获取机器人的 Webhook URL？</h3>
+        <p>A: 在企业微信群中，点击右上角的"..."按钮，选择"群机器人"，然后"添加机器人"，创建成功后会获得一个 Webhook URL。</p>
+        
+        <h3>Q: 安全码有什么用？</h3>
+        <p>A: 安全码是三位数字，用于验证 API 调用的合法性，防止未授权的消息发送。</p>
+        
+        <h3>Q: 支持哪些文件类型？</h3>
+        <p>A: 支持企业微信机器人允许的所有文件类型，包括文档、图片、音频、视频等。</p>
+        
+        <h3>Q: 消息发送失败怎么办？</h3>
+        <p>A: 检查机器人 ID 和安全码是否正确，确认 Webhook URL 是否有效，查看返回的错误消息进行排查。</p>
+    </div>
+</body>
+</html>

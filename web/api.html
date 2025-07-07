@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API文档 - 企业微信机器人服务</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 25px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007acc;
+        }
+        .method {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #007acc;
+        }
+        .endpoint {
+            font-weight: bold;
+            color: #007acc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>API接口文档</h1>
+        
+        <h2>1. 发送消息 API</h2>
+        <div class="method">
+            <div class="endpoint">POST /send</div>
+            <p>发送文本或Markdown消息到指定的企业微信群</p>
+        </div>
+        
+        <h3>请求参数</h3>
+        <table>
+            <tr>
+                <th>参数名</th>
+                <th>类型</th>
+                <th>必需</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>id</td>
+                <td>int</td>
+                <td>是</td>
+                <td>机器人ID</td>
+            </tr>
+            <tr>
+                <td>security_code</td>
+                <td>string</td>
+                <td>是</td>
+                <td>安全码</td>
+            </tr>
+            <tr>
+                <td>msgtype</td>
+                <td>string</td>
+                <td>是</td>
+                <td>消息类型：text、markdown、file</td>
+            </tr>
+            <tr>
+                <td>content</td>
+                <td>string</td>
+                <td>是</td>
+                <td>消息内容或媒体ID（文件消息）</td>
+            </tr>
+        </table>
+        
+        <h3>请求示例</h3>
+        <pre><code>curl -X POST http://localhost:8080/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1,
+    "security_code": "123",
+    "msgtype": "text",
+    "content": "Hello, World!"
+  }'</code></pre>
+        
+        <h3>响应示例</h3>
+        <pre><code>{
+  "status": "success",
+  "message": "消息发送成功"
+}</code></pre>
+        
+        <h2>2. 文件上传 API</h2>
+        <div class="method">
+            <div class="endpoint">POST /upload</div>
+            <p>上传文件到企业微信，返回媒体ID</p>
+        </div>
+        
+        <h3>请求参数（表单提交）</h3>
+        <table>
+            <tr>
+                <th>参数名</th>
+                <th>类型</th>
+                <th>必需</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>id</td>
+                <td>string</td>
+                <td>是</td>
+                <td>机器人ID</td>
+            </tr>
+            <tr>
+                <td>security_code</td>
+                <td>string</td>
+                <td>是</td>
+                <td>安全码</td>
+            </tr>
+            <tr>
+                <td>media</td>
+                <td>file</td>
+                <td>是</td>
+                <td>要上传的文件</td>
+            </tr>
+        </table>
+        
+        <h3>请求示例</h3>
+        <pre><code>curl -X POST http://localhost:8080/upload \
+  -F "id=1" \
+  -F "security_code=123" \
+  -F "media=@/path/to/file.pdf"</code></pre>
+        
+        <h2>3. 文件上传并发送 API</h2>
+        <div class="method">
+            <div class="endpoint">POST /sendfile</div>
+            <p>上传文件并直接发送到群聊</p>
+        </div>
+        
+        <h3>请求参数</h3>
+        <p>与文件上传API相同的参数</p>
+        
+        <h3>请求示例</h3>
+        <pre><code>curl -X POST http://localhost:8080/sendfile \
+  -F "id=1" \
+  -F "security_code=123" \
+  -F "media=@/path/to/document.pdf"</code></pre>
+        
+        <h2>错误码说明</h2>
+        <table>
+            <tr>
+                <th>HTTP状态码</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>200</td>
+                <td>请求成功</td>
+            </tr>
+            <tr>
+                <td>400</td>
+                <td>请求参数错误</td>
+            </tr>
+            <tr>
+                <td>404</td>
+                <td>机器人未找到或安全码错误</td>
+            </tr>
+            <tr>
+                <td>405</td>
+                <td>请求方法不支持</td>
+            </tr>
+            <tr>
+                <td>500</td>
+                <td>服务器内部错误</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

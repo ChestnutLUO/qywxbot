@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API使用示例 - 企业微信机器人服务</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 25px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007acc;
+        }
+        .example {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+        .note {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>API使用示例</h1>
+        
+        <h2>Shell脚本示例</h2>
+        <div class="example">
+            <h3>发送文本消息</h3>
+            <pre><code>#!/bin/bash
+BOT_ID=1
+SECURITY_CODE="123"
+SERVER_URL="http://localhost:8080"
+
+# 发送文本消息
+curl -X POST ${SERVER_URL}/send \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"id\": ${BOT_ID},
+    \"security_code\": \"${SECURITY_CODE}\",
+    \"msgtype\": \"text\",
+    \"content\": \"服务器状态正常\"
+  }"</code></pre>
+        </div>
+        
+        <div class="example">
+            <h3>发送Markdown消息</h3>
+            <pre><code>#!/bin/bash
+BOT_ID=1
+SECURITY_CODE="123"
+SERVER_URL="http://localhost:8080"
+
+# 发送Markdown消息
+curl -X POST ${SERVER_URL}/send \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"id\": ${BOT_ID},
+    \"security_code\": \"${SECURITY_CODE}\",
+    \"msgtype\": \"markdown\",
+    \"content\": \"## 系统报告\n\n- **CPU使用率**: 85%\n- **内存使用率**: 76%\n- **磁盘使用率**: 45%\n\n> 系统运行正常\"
+  }"</code></pre>
+        </div>
+        
+        <div class="example">
+            <h3>上传并发送文件</h3>
+            <pre><code>#!/bin/bash
+BOT_ID=1
+SECURITY_CODE="123"
+SERVER_URL="http://localhost:8080"
+
+# 上传并发送文件
+curl -X POST ${SERVER_URL}/sendfile \
+  -F "id=${BOT_ID}" \
+  -F "security_code=${SECURITY_CODE}" \
+  -F "media=@/path/to/report.pdf"</code></pre>
+        </div>
+        
+        <h2>Python示例</h2>
+        <div class="example">
+            <h3>发送文本消息</h3>
+            <pre><code>import requests
+import json
+
+def send_text_message(bot_id, security_code, content, server_url="http://localhost:8080"):
+    url = f"{server_url}/send"
+    data = {
+        "id": bot_id,
+        "security_code": security_code,
+        "msgtype": "text",
+        "content": content
+    }
+    
+    response = requests.post(url, json=data)
+    return response.json()
+
+# 使用示例
+result = send_text_message(1, "123", "Hello from Python!")
+print(result)</code></pre>
+        </div>
+        
+        <div class="example">
+            <h3>发送文件</h3>
+            <pre><code>import requests
+
+def send_file(bot_id, security_code, file_path, server_url="http://localhost:8080"):
+    url = f"{server_url}/sendfile"
+    
+    with open(file_path, 'rb') as f:
+        files = {'media': f}
+        data = {
+            'id': str(bot_id),
+            'security_code': security_code
+        }
+        
+        response = requests.post(url, files=files, data=data)
+        return response.json()
+
+# 使用示例
+result = send_file(1, "123", "/path/to/document.pdf")
+print(result)</code></pre>
+        </div>
+        
+        <h2>PowerShell示例</h2>
+        <div class="example">
+            <h3>发送文本消息</h3>
+            <pre><code>$botId = 1
+$securityCode = "123"
+$serverUrl = "http://localhost:8080"
+
+$body = @{
+    id = $botId
+    security_code = $securityCode
+    msgtype = "text"
+    content = "PowerShell消息测试"
+} | ConvertTo-Json
+
+$response = Invoke-RestMethod -Uri "$serverUrl/send" -Method Post -Body $body -ContentType "application/json"
+Write-Output $response</code></pre>
+        </div>
+        
+        <h2>常见使用场景</h2>
+        
+        <h3>1. 服务器监控告警</h3>
+        <div class="note">
+            <p>可以将机器人集成到监控系统中，当服务器出现异常时自动发送告警消息到企业微信群。</p>
+        </div>
+        
+        <h3>2. 定时任务通知</h3>
+        <div class="note">
+            <p>在cron任务或定时脚本中使用，自动发送任务执行结果通知。</p>
+        </div>
+        
+        <h3>3. 构建部署通知</h3>
+        <div class="note">
+            <p>在CI/CD流水线中集成，自动发送构建和部署状态通知。</p>
+        </div>
+        
+        <h3>4. 日志和报告推送</h3>
+        <div class="note">
+            <p>定期推送系统日志摘要、业务报告等文档到工作群。</p>
+        </div>
+        
+        <h2>最佳实践</h2>
+        <ul>
+            <li>妥善保管机器人ID和安全码，不要在代码中硬编码</li>
+            <li>为不同的应用场景注册不同的机器人，便于管理</li>
+            <li>使用Markdown格式可以让消息更加美观和易读</li>
+            <li>文件消息适合发送报告、日志等文档</li>
+            <li>合理控制消息频率，避免消息刷屏</li>
+        </ul>
+    </div>
+</body>
+</html>

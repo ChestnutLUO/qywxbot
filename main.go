@@ -91,6 +91,7 @@ type TemplateCard struct {
 	EmphasisContent *EmphasisContent `json:"emphasis_content,omitempty"`
 	SubTitleText    string           `json:"sub_title_text,omitempty"`
 	CardAction      CardAction       `json:"card_action"`
+	JumpList        []JumpItem       `json:"jump_list,omitempty"`
 }
 
 type Source struct {
@@ -112,6 +113,14 @@ type EmphasisContent struct {
 type CardAction struct {
 	Type int    `json:"type"`
 	URL  string `json:"url,omitempty"`
+}
+
+type JumpItem struct {
+	Type     int    `json:"type"`
+	URL      string `json:"url,omitempty"`
+	Title    string `json:"title"`
+	AppID    string `json:"appid,omitempty"`
+	PagePath string `json:"pagepath,omitempty"`
 }
 
 
@@ -147,6 +156,7 @@ func main() {
 	http.HandleFunc("/send", sendHandler)
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/sendfile", sendfileHandler)
+	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	if config.CertFile != "" && config.KeyFile != "" {
 		log.Printf("HTTPS 服务器正在 %s 启动...", config.HTTPSPort)
@@ -640,6 +650,7 @@ func postMessage(url string, payload []byte) error {
 }
 
 func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string) error {
+	serverURL := getServerURL()
 	card := WeComTemplateCardMessage{
 		MsgType: "template_card",
 		TemplateCard: TemplateCard{
@@ -659,7 +670,24 @@ func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string
 			SubTitleText: fmt.Sprintf("安全码: %s", securityCode),
 			CardAction: CardAction{
 				Type: 1,
-				URL:  "https://work.weixin.qq.com",
+				URL:  serverURL,
+			},
+			JumpList: []JumpItem{
+				{
+					Type:  1,
+					URL:   serverURL + "/web/bot-scripts",
+					Title: "查看脚本使用指南",
+				},
+				{
+					Type:  1,
+					URL:   serverURL + "/web/api-usage",
+					Title: "查看API使用指南",
+				},
+				{
+					Type:  1,
+					URL:   serverURL,
+					Title: "创建新的机器人",
+				},
 			},
 		},
 	}
@@ -715,6 +743,12 @@ func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL stri
 		return fmt.Errorf("发送 bot.bat 失败: %v", err)
 	}
 
+	// 发送 Windows 二进制程序
+	err = sendBotBinary(webhookURL, botID, securityCode, "bot.exe")
+	if err != nil {
+		return fmt.Errorf("发送 bot.exe 失败: %v", err)
+	}
+
 	return nil
 }
 
@@ -759,6 +793,60 @@ func sendBotScript(webhookURL string, botID int64, securityCode, serverURL, scri
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("media", fmt.Sprintf("bot_%d%s", botID, filepath.Ext(scriptName)))
+	if err != nil {
+		return fmt.Errorf("创建表单文件失败: %v", err)
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("复制文件内容失败: %v", err)
+	}
+	writer.Close()
+
+	req, err := http.NewRequest("POST", uploadURL, body)
+	if err != nil {
+		return fmt.Errorf("创建上传请求失败: %v", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("上传文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var uploadResp UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&uploadResp); err != nil {
+		return fmt.Errorf("解析上传响应失败: %v", err)
+	}
+
+	if uploadResp.ErrCode != 0 {
+		return fmt.Errorf("文件上传错误: %s", uploadResp.ErrMsg)
+	}
+
+	// 发送文件消息
+	return sendFileMessage(webhookURL, uploadResp.MediaID)
+}
+
+func sendBotBinary(webhookURL string, botID int64, securityCode, binaryName string) error {
+	// 检查二进制文件是否存在
+	if _, err := os.Stat(binaryName); os.IsNotExist(err) {
+		return fmt.Errorf("二进制文件 %s 不存在", binaryName)
+	}
+
+	// 上传二进制文件到企业微信
+	key := strings.Split(webhookURL, "?key=")[1]
+	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", key)
+
+	file, err := os.Open(binaryName)
+	if err != nil {
+		return fmt.Errorf("打开二进制文件失败: %v", err)
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("media", "bot.exe")
 	if err != nil {
 		return fmt.Errorf("创建表单文件失败: %v", err)
 	}

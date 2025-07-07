@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 二进制程序文档 - 企业微信机器人服务</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #777;
+            margin-top: 20px;
+        }
+        .nav {
+            background: #007acc;
+            color: white;
+            padding: 15px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007acc;
+        }
+        .feature-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .command-box {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #007acc;
+        }
+        .platform {
+            display: inline-block;
+            background: #0d6efd;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .note {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .download-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .download-btn:hover {
+            background: #218838;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">注册机器人</a>
+            <a href="/web/">文档首页</a>
+            <a href="/web/api.html">API文档</a>
+            <a href="/web/api-usage.html">API使用文档</a>
+            <a href="/web/bot-scripts.html">Bot脚本文档</a>
+            <a href="/web/windows-binary.html">Windows程序</a>
+            <a href="/web/examples.html">API使用示例</a>
+        </div>
+        
+        <h1>bot.exe - Windows 二进制程序</h1>
+        <span class="platform">Windows Binary</span>
+        
+        <div class="note">
+            <h3>程序说明</h3>
+            <p><strong>bot.exe</strong> 是用 Go 语言编写的跨平台命令行工具，为 Windows 用户提供强大的企业微信机器人操作功能。当您成功注册机器人后，系统会自动将此程序发送到您的企业微信群中。</p>
+        </div>
+        
+        <div class="success">
+            <h3>获取程序</h3>
+            <ul>
+                <li><strong>自动获取：</strong>注册机器人成功后，bot.exe 会自动发送到您的企业微信群</li>
+                <li><strong>手动下载：</strong>也可以联系管理员获取最新版本</li>
+            </ul>
+        </div>
+        
+        <h2>基本用法</h2>
+        <div class="command-box">
+            <strong>语法：</strong><br>
+            <code>bot.exe &lt;命令&gt; &lt;服务器地址&gt; &lt;端口&gt; &lt;机器人ID&gt; &lt;安全码&gt; &lt;参数&gt;</code>
+        </div>
+        
+        <h2>支持的命令</h2>
+        <table>
+            <tr>
+                <th>命令</th>
+                <th>参数</th>
+                <th>功能描述</th>
+                <th>返回结果</th>
+            </tr>
+            <tr>
+                <td><code>send</code></td>
+                <td>&lt;消息内容&gt;</td>
+                <td>发送 Markdown 格式的文本消息</td>
+                <td>发送状态</td>
+            </tr>
+            <tr>
+                <td><code>sendfile</code></td>
+                <td>&lt;文件路径&gt;</td>
+                <td>上传并发送文件到群聊</td>
+                <td>发送状态 + MediaID</td>
+            </tr>
+            <tr>
+                <td><code>upload</code></td>
+                <td>&lt;文件路径&gt;</td>
+                <td>仅上传文件，返回 media_id</td>
+                <td>MediaID（用于后续发送）</td>
+            </tr>
+        </table>
+        
+        <h2>使用示例</h2>
+        
+        <h3>发送文本消息</h3>
+        <pre><code># 发送简单文本消息
+bot.exe send localhost 8080 1 123 "服务器运行正常"
+
+# 发送 Markdown 格式消息
+bot.exe send localhost 8080 1 123 "### 系统警告\n请立即检查系统状态"
+
+# 发送包含链接的消息
+bot.exe send localhost 8080 1 123 "### 系统状态\n\n**状态**: 正常\n**时间**: 2024-07-07\n\n[查看详情](http://monitor.example.com)"</code></pre>
+        
+        <h3>发送文件</h3>
+        <pre><code># 发送当前目录下的文件
+bot.exe sendfile localhost 8080 1 123 "report.pdf"
+
+# 发送绝对路径文件
+bot.exe sendfile localhost 8080 1 123 "C:\Users\Admin\Documents\report.pdf"
+
+# 发送系统日志
+bot.exe sendfile localhost 8080 1 123 "C:\Windows\System32\LogFiles\system.log"</code></pre>
+        
+        <h3>仅上传文件（获取MediaID）</h3>
+        <pre><code># 上传文件并获取 media_id
+bot.exe upload localhost 8080 1 123 "C:\docs\file.txt"
+
+# 成功输出示例：
+# Success: 文件上传 - 文件上传成功
+# Media ID: 3CEVBKZnCEm4Khu6b-C5fT3e-EfCZ277VmOcbsKNxeqsPQjpCiljPmiREkpcG-TaD</code></pre>
+        
+        <h2>高级应用</h2>
+        
+        <h3>创建便捷批处理脚本</h3>
+        <div class="feature-box">
+            <h4>quick-bot.bat</h4>
+            <pre><code>@echo off
+:: 配置信息
+set SERVER=your-server.com
+set PORT=8080
+set BOT_ID=1
+set SECURITY_CODE=123
+
+:: 快捷命令处理
+if "%1"=="msg" (
+    bot.exe send %SERVER% %PORT% %BOT_ID% %SECURITY_CODE% "%~2"
+    goto :eof
+)
+
+if "%1"=="file" (
+    bot.exe sendfile %SERVER% %PORT% %BOT_ID% %SECURITY_CODE% "%~2"
+    goto :eof
+)
+
+if "%1"=="upload" (
+    bot.exe upload %SERVER% %PORT% %BOT_ID% %SECURITY_CODE% "%~2"
+    goto :eof
+)
+
+:: 显示帮助
+echo 企业微信机器人快捷工具
+echo.
+echo 用法:
+echo   %0 msg "消息内容"      - 发送消息
+echo   %0 file "文件路径"     - 发送文件  
+echo   %0 upload "文件路径"   - 上传文件
+echo.
+echo 示例:
+echo   %0 msg "系统状态正常"
+echo   %0 file "C:\reports\daily.pdf"</code></pre>
+        </div>
+        
+        <h3>系统监控脚本</h3>
+        <div class="feature-box">
+            <h4>monitor.bat</h4>
+            <pre><code>@echo off
+setlocal enabledelayedexpansion
+
+:: 配置
+set SERVER=your-server.com
+set PORT=8080
+set BOT_ID=1
+set SECURITY_CODE=123
+
+:: 获取系统信息
+for /f "tokens=2 delims==" %%i in ('wmic cpu get loadpercentage /value ^| find "="') do set CPU=%%i
+for /f "tokens=4" %%i in ('systeminfo ^| find "Available Physical Memory"') do set MEM=%%i
+
+:: 获取磁盘使用率
+for /f "tokens=3" %%i in ('dir C:\ ^| find "bytes free"') do set DISK=%%i
+
+:: 生成报告
+set REPORT=### 系统监控报告\n\n
+set REPORT=!REPORT!**📊 CPU使用率**: !CPU!%%\n
+set REPORT=!REPORT!**💾 可用内存**: !MEM!\n  
+set REPORT=!REPORT!**💿 磁盘可用**: !DISK!\n
+set REPORT=!REPORT!**🕐 检查时间**: %date% %time%\n\n
+set REPORT=!REPORT!> **状态**: 系统运行正常
+
+:: 发送报告
+bot.exe send %SERVER% %PORT% %BOT_ID% %SECURITY_CODE% "!REPORT!"
+
+if %errorlevel% equ 0 (
+    echo [%time%] 监控报告发送成功
+) else (
+    echo [%time%] 监控报告发送失败
+)</code></pre>
+        </div>
+        
+        <h3>PowerShell 集成</h3>
+        <div class="feature-box">
+            <h4>PowerShell 函数库</h4>
+            <pre><code># bot-functions.ps1
+$global:BotConfig = @{
+    Server = "your-server.com"
+    Port = "8080"
+    BotId = "1"
+    SecurityCode = "123"
+}
+
+function Send-BotMessage {
+    param([string]$Message)
+    & .\bot.exe send $global:BotConfig.Server $global:BotConfig.Port $global:BotConfig.BotId $global:BotConfig.SecurityCode $Message
+}
+
+function Send-BotFile {
+    param([string]$FilePath)
+    if (Test-Path $FilePath) {
+        & .\bot.exe sendfile $global:BotConfig.Server $global:BotConfig.Port $global:BotConfig.BotId $global:BotConfig.SecurityCode $FilePath
+    } else {
+        Write-Host "文件不存在: $FilePath" -ForegroundColor Red
+    }
+}
+
+function Upload-BotFile {
+    param([string]$FilePath)
+    if (Test-Path $FilePath) {
+        & .\bot.exe upload $global:BotConfig.Server $global:BotConfig.Port $global:BotConfig.BotId $global:BotConfig.SecurityCode $FilePath
+    } else {
+        Write-Host "文件不存在: $FilePath" -ForegroundColor Red
+    }
+}
+
+# 使用示例
+# . .\bot-functions.ps1
+# Send-BotMessage "PowerShell 脚本执行完成"
+# Send-BotFile "C:\logs\execution.log"</code></pre>
+        </div>
+        
+        <h2>程序特性</h2>
+        <div class="feature-box">
+            <h3>✨ 核心优势</h3>
+            <ul>
+                <li><strong>🔥 零依赖</strong>：单个可执行文件，无需安装运行时</li>
+                <li><strong>🚀 高性能</strong>：Go 语言编写，启动快速，内存占用小</li>
+                <li><strong>🌐 跨版本</strong>：支持 Windows 7/8/10/11 及 Server 版本</li>
+                <li><strong>🔒 安全可靠</strong>：内置错误处理和安全验证</li>
+                <li><strong>📝 中文友好</strong>：完全支持中文消息和文件名</li>
+                <li><strong>🔍 详细日志</strong>：提供清晰的错误信息和执行状态</li>
+            </ul>
+        </div>
+        
+        <h2>错误处理</h2>
+        
+        <h3>程序退出码</h3>
+        <table>
+            <tr>
+                <th>退出码</th>
+                <th>含义</th>
+                <th>处理建议</th>
+            </tr>
+            <tr>
+                <td>0</td>
+                <td>成功执行</td>
+                <td>操作完成，无需处理</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>参数错误或执行失败</td>
+                <td>检查命令参数和网络连接</td>
+            </tr>
+        </table>
+        
+        <h3>常见问题处理</h3>
+        <div class="warning">
+            <h4>⚠️ 常见错误及解决方案</h4>
+            <ul>
+                <li><strong>文件不存在：</strong>检查文件路径是否正确，确保文件存在且可读</li>
+                <li><strong>网络连接失败：</strong>验证服务器地址和端口，检查网络连接</li>
+                <li><strong>认证失败：</strong>确认机器人 ID 和安全码是否正确</li>
+                <li><strong>文件上传失败：</strong>检查文件大小是否超出企业微信限制</li>
+                <li><strong>权限不足：</strong>确保程序有读取文件的权限</li>
+            </ul>
+        </div>
+        
+        <h3>调试技巧</h3>
+        <pre><code># 在批处理中检查执行结果
+bot.exe send localhost 8080 1 123 "测试消息"
+if %errorlevel% equ 0 (
+    echo 消息发送成功
+) else (
+    echo 消息发送失败，错误码: %errorlevel%
+)
+
+# 在 PowerShell 中检查执行结果
+$result = & .\bot.exe send localhost 8080 1 123 "测试消息"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "发送成功: $result" -ForegroundColor Green
+} else {
+    Write-Host "发送失败: $result" -ForegroundColor Red
+}</code></pre>
+        
+        <h2>最佳实践</h2>
+        <ul>
+            <li><strong>🔧 配置管理：</strong>将服务器信息存储在配置文件或环境变量中</li>
+            <li><strong>📝 日志记录：</strong>在自动化脚本中记录执行日志便于排查问题</li>
+            <li><strong>⏰ 频率控制：</strong>合理控制消息发送频率，避免被限流</li>
+            <li><strong>🔄 错误重试：</strong>在关键应用中实现失败重试机制</li>
+            <li><strong>🛡️ 安全存储：</strong>安全存储机器人 ID 和安全码，避免硬编码</li>
+            <li><strong>🧪 测试验证：</strong>在生产环境使用前先在测试环境验证功能</li>
+        </ul>
+        
+        <div class="note">
+            <h3>💡 技术支持</h3>
+            <p>如果在使用过程中遇到问题，请：</p>
+            <ul>
+                <li>检查命令参数是否正确</li>
+                <li>验证网络连接和服务器状态</li>
+                <li>查看错误信息和退出码</li>
+                <li>参考文档中的常见问题解答</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
