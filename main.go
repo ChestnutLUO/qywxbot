@@ -422,7 +422,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		botExeExampleForMsg := fmt.Sprintf(`bot.exe send %s %s %d %s "来自 bot.exe 的消息"`, serverAddr, port, id, securityCode)
-		winBotMessage := fmt.Sprintf("您也可以在 Windows Terminal 或者 PowerShell 中使用 bot.exe 发送消息。\n```\n%s\n```", botExeExampleForMsg)
+		winBotMessage := fmt.Sprintf("使用以下命令在 Windows Terminal 或者 PowerShell 中使用 bot.exe 发送消息。\n```\n%s\n```", botExeExampleForMsg)
 
 		err = sendMarkdownMessage(url, winBotMessage)
 		if err != nil {
@@ -753,19 +753,14 @@ func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string
 			JumpList: []JumpItem{
 				{
 					Type:  1,
-					URL:   serverURL + "/console",
-					Title: "管理控制台",
+					URL:   serverURL + "/web/bot-scripts.html",
+					Title: "脚本使用文档",
 				},
 				{
 					Type:  1,
-					URL:   serverURL + "/web/windows-binary.html",
-					Title: "下载工具",
-				},
-				{
-					Type:  1,
-					URL:   serverURL + "/web/api-usage.html",
-					Title: "使用文档",
-				},
+					URL:   serverURL + "/web/api-docs.html",
+					Title: "API文档",
+				}
 			},
 		},
 	}
