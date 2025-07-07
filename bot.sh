@@ -55,13 +55,13 @@ if [ $# -eq 0 ]; then
 fi
 
 case "$1" in
-    "text")
+    "send")
         send_text "$2"
         ;;
     "markdown")
         send_markdown "$2"
         ;;
-    "file")
+    "send_file")
         send_file "$2"
         ;;
     *)

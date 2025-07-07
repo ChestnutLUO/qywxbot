@@ -760,7 +760,7 @@ func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string
 					Type:  1,
 					URL:   serverURL + "/web/api-docs.html",
 					Title: "API文档",
-				}
+				},
 			},
 		},
 	}
