@@ -143,6 +143,7 @@
     <div class="container">
         <div class="nav">
             <a href="/">注册机器人</a>
+            <a href="/console">管理控制台</a>
             <a href="/web/">文档首页</a>
             <a href="/web/api.html">API文档</a>
             <a href="/web/api-usage.html">API使用文档</a>
@@ -154,18 +155,51 @@
         <h1>Bot 脚本使用文档</h1>
         
         <div class="note">
-            <strong>说明：</strong>本文档提供了 <code>bot.sh</code>（适用于 Linux/macOS）和 <code>bot.bat</code>（适用于 Windows）脚本的使用指南，帮助您快速与企业微信机器人服务器进行交互。
+            <strong>说明：</strong>本文档提供了 <code>bot.sh</code>（适用于 Linux/macOS）脚本的使用指南，帮助您快速与企业微信机器人服务器进行交互。Windows 用户请使用 <a href="/web/windows-binary.html">Windows 二进制程序</a>。
         </div>
         
         <h2>脚本获取方式</h2>
         <div class="success">
             <p><strong>自动获取：</strong>当您成功注册机器人后，系统会自动生成包含您的机器人 ID 和安全码的脚本文件，并发送到您的企业微信群中。</p>
             <p><strong>手动配置：</strong>您也可以下载通用脚本模板，手动配置您的机器人信息。</p>
+            <p><strong>注意：</strong>我们已移除 Windows 批处理脚本支持，推荐使用功能更强大的 <a href="/web/windows-binary.html">Windows 二进制程序</a>。</p>
         </div>
         
         <div class="script-section">
             <h2>1. bot.sh (Linux/macOS)</h2>
             <span class="platform linux">Linux/macOS</span>
+            
+            <div class="warning">
+                <h3>⚠️ 系统要求</h3>
+                <p><strong>bot.sh 脚本需要以下依赖：</strong></p>
+                <ul>
+                    <li><strong>curl</strong> - 用于发送HTTP请求</li>
+                    <li><strong>bash</strong> - Shell解释器 (通常已预装)</li>
+                    <li><strong>基础Unix工具</strong> - grep, awk, sed 等</li>
+                </ul>
+                
+                <h4>安装 curl</h4>
+                <pre><code># Ubuntu/Debian
+sudo apt-get update && sudo apt-get install curl
+
+# CentOS/RHEL/Rocky Linux
+sudo yum install curl
+# 或者 (较新版本)
+sudo dnf install curl
+
+# macOS (使用 Homebrew)
+brew install curl
+
+# macOS (使用 MacPorts)
+sudo port install curl</code></pre>
+                
+                <h4>验证安装</h4>
+                <pre><code># 检查 curl 是否可用
+curl --version
+
+# 检查 bash 版本
+bash --version</code></pre>
+            </div>
             
             <h3>基本用法</h3>
             <div class="command-box">
@@ -227,68 +261,10 @@ chmod +x bot.sh
 ./bot.sh send "测试消息"</code></pre>
         </div>
         
-        <div class="script-section">
-            <h2>2. bot.bat (Windows)</h2>
-            <span class="platform windows">Windows</span>
-            
-            <h3>基本用法</h3>
-            <div class="command-box">
-                <code>bot.bat &lt;命令&gt; &lt;参数&gt;</code>
-            </div>
-            
-            <h3>支持的命令</h3>
-            <table>
-                <tr>
-                    <th>命令</th>
-                    <th>参数</th>
-                    <th>描述</th>
-                </tr>
-                <tr>
-                    <td><code>send</code></td>
-                    <td>"消息内容"</td>
-                    <td>发送 Markdown 格式的文本消息（需要用引号包围）</td>
-                </tr>
-                <tr>
-                    <td><code>sendfile</code></td>
-                    <td>&lt;文件路径&gt;</td>
-                    <td>发送文件到群聊</td>
-                </tr>
-            </table>
-            
-            <h3>使用示例</h3>
-            <h4>发送文本消息</h4>
-            <pre><code>:: 发送简单文本消息
-bot.bat send "服务器运行正常"
-
-:: 发送 Markdown 格式消息
-bot.bat send "### 系统警告\n请立即检查系统状态"
-
-:: 发送多行消息
-bot.bat send "### 新警告\n请立即检查系统状态。\n\n> 这是一条重要通知"</code></pre>
-            
-            <h4>发送文件</h4>
-            <pre><code>:: 发送当前目录下的文件
-bot.bat sendfile API.md
-
-:: 发送绝对路径文件
-bot.bat sendfile C:\Users\Username\Documents\report.pdf
-
-:: 发送日志文件
-bot.bat sendfile C:\logs\system.log</code></pre>
-            
-            <h3>配置信息</h3>
-            <div class="config">
-                <p><strong>默认机器人 ID：</strong> <code>%DEFAULT_BOT_ID%</code></p>
-                <p><strong>默认安全码：</strong> <code>%SECURITY_CODE%</code></p>
-                <p><strong>服务器地址：</strong> <code>%SERVER_URL%</code></p>
-            </div>
-            
-            <h3>运行方式</h3>
-            <pre><code>:: 在命令提示符中运行
-bot.bat send "测试消息"
-
-:: 在 PowerShell 中运行
-.\bot.bat send "测试消息"</code></pre>
+        <div class="warning">
+            <h2>⚠️ Windows 批处理脚本已停用</h2>
+            <p><strong>重要通知：</strong>由于 Windows 批处理脚本存在一些兼容性问题，我们已经停用了 <code>bot.bat</code> 脚本。</p>
+            <p><strong>替代方案：</strong>Windows 用户请使用功能更强大、更稳定的 <a href="/web/windows-binary.html"><strong>Windows 二进制程序 (bot.exe)</strong></a>，它提供了完整的命令行功能，支持所有操作且无依赖。</p>
         </div>
         
         <div class="note">
@@ -368,7 +344,34 @@ set SERVER_URL=http://your-server:8080</code></pre>
         <h3>Q: 如何发送包含特殊字符的消息？</h3>
         <div class="note">
             <p><strong>Linux/macOS：</strong>使用单引号或转义字符：<code>./bot.sh send 'message with "quotes"'</code></p>
-            <p><strong>Windows：</strong>使用双引号并转义内部引号：<code>bot.bat send "message with \"quotes\""</code></p>
+        </div>
+        
+        <h3>Q: bot.sh 脚本执行失败怎么办？</h3>
+        <div class="warning">
+            <p><strong>常见问题排查：</strong></p>
+            <ol>
+                <li><strong>权限问题：</strong>
+                    <pre><code># 给脚本执行权限
+chmod +x bot.sh</code></pre>
+                </li>
+                <li><strong>curl 未安装：</strong>
+                    <pre><code># 检查 curl 是否存在
+which curl
+# 如果没有输出，请按上述方法安装 curl</code></pre>
+                </li>
+                <li><strong>网络连接问题：</strong>
+                    <pre><code># 测试网络连接
+curl -I http://your-server:8080</code></pre>
+                </li>
+                <li><strong>脚本语法错误：</strong>
+                    <pre><code># 检查脚本语法
+bash -n bot.sh</code></pre>
+                </li>
+                <li><strong>环境变量问题：</strong>
+                    <pre><code># 确保脚本中的变量正确设置
+head -10 bot.sh</code></pre>
+                </li>
+            </ol>
         </div>
         
         <h3>Q: 支持发送哪些类型的文件？</h3>

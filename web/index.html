@@ -61,6 +61,7 @@
     <div class="container">
         <div class="nav">
             <a href="/">注册机器人</a>
+            <a href="/console">管理控制台</a>
             <a href="/web/">文档首页</a>
             <a href="/web/api.html">API文档</a>
             <a href="/web/api-usage.html">API使用文档</a>
@@ -92,9 +93,19 @@
             <li><strong>消息类型支持</strong>：文本、Markdown、文件消息</li>
             <li><strong>文件上传</strong>：支持上传文件到企业微信并发送</li>
             <li><strong>安全验证</strong>：每个机器人都有独立的安全码</li>
-            <li><strong>脚本生成</strong>：自动生成Shell和批处理脚本</li>
+            <li><strong>脚本生成</strong>：自动生成Shell脚本和Windows二进制程序</li>
+            <li><strong>管理控制台</strong>：浏览器中查看和管理已注册的机器人</li>
             <li><strong>HTTPS支持</strong>：支持ACME自动证书申请</li>
         </ul>
+        
+        <div class="note">
+            <h3>💡 系统要求</h3>
+            <p><strong>Shell脚本用户请注意：</strong></p>
+            <ul>
+                <li><strong>Linux/macOS：</strong>需要安装 <code>curl</code> 工具</li>
+                <li><strong>Windows：</strong>建议使用 <a href="/web/windows-binary.html">Windows二进制程序</a>，无需额外依赖</li>
+            </ul>
+        </div>
         
         <h2>相关链接</h2>
         <ul>

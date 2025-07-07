@@ -179,15 +179,15 @@ curl -X POST http://localhost:8080/send \
 ```
 
 #### Shell 脚本 (Linux/macOS)
+**⚠️ 需要 curl：** 确保系统已安装 `curl` 工具
 ```bash
+# 安装 curl (如果尚未安装)
+# Ubuntu/Debian: sudo apt-get install curl
+# CentOS/RHEL: sudo yum install curl
+# macOS: brew install curl
+
 ./bot.sh send "Hello from Shell!"
 ./bot.sh sendfile "/path/to/file.pdf"
-```
-
-#### Windows 批处理
-```cmd
-bot.bat send "Hello from Windows!"
-bot.bat sendfile "C:\path\to\file.pdf"
 ```
 
 #### Windows 二进制程序

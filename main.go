@@ -133,8 +133,10 @@ var config Config
 
 
 type Bot struct {
-	ID  int
-	URL string
+	ID           int    `json:"id"`
+	URL          string `json:"url"`
+	SecurityCode string `json:"security_code"`
+	CreatedAt    string `json:"created_at"`
 }
 
 func main() {
@@ -156,6 +158,8 @@ func main() {
 	http.HandleFunc("/send", sendHandler)
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/sendfile", sendfileHandler)
+	http.HandleFunc("/console", consoleHandler)
+	http.HandleFunc("/api/bots", botsAPIHandler)
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	if config.CertFile != "" && config.KeyFile != "" {
@@ -322,7 +326,8 @@ func createTable() {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS bots (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 		"url" TEXT,
-		"security_code" TEXT
+		"security_code" TEXT,
+		"created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
 	  );`
 
 	statement, err := db.Prepare(createTableSQL)
@@ -675,18 +680,18 @@ func sendTemplateCardMessage(webhookURL string, botID int64, securityCode string
 			JumpList: []JumpItem{
 				{
 					Type:  1,
-					URL:   serverURL + "/web/bot-scripts",
-					Title: "查看脚本使用指南",
+					URL:   serverURL + "/console",
+					Title: "管理控制台",
 				},
 				{
 					Type:  1,
-					URL:   serverURL + "/web/api-usage",
-					Title: "查看API使用指南",
+					URL:   serverURL + "/web/windows-binary.html",
+					Title: "下载工具",
 				},
 				{
 					Type:  1,
-					URL:   serverURL,
-					Title: "创建新的机器人",
+					URL:   serverURL + "/web/api-usage.html",
+					Title: "使用文档",
 				},
 			},
 		},
@@ -735,12 +740,6 @@ func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL stri
 	err := sendBotScript(webhookURL, botID, securityCode, serverURL, "bot.sh")
 	if err != nil {
 		return fmt.Errorf("发送 bot.sh 失败: %v", err)
-	}
-
-	// 发送 bot.bat 脚本
-	err = sendBotScript(webhookURL, botID, securityCode, serverURL, "bot.bat")
-	if err != nil {
-		return fmt.Errorf("发送 bot.bat 失败: %v", err)
 	}
 
 	// 发送 Windows 二进制程序

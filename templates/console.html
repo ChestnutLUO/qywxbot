@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人管理控制台 - 企业微信机器人服务</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-links a:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .bots-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fb;
+            padding: 20px;
+            border-bottom: 1px solid #e1e5e9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .bots-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bots-table th,
+        .bots-table td {
+            text-align: left;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .bots-table th {
+            background: #f8f9fb;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bots-table tr:hover {
+            background: #f8f9fb;
+        }
+
+        .bot-id {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .security-code {
+            font-family: 'Courier New', monospace;
+            background: #f1f3f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .webhook-url {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .created-time {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .config-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 30px;
+            padding: 25px;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .config-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .config-value {
+            font-family: 'Courier New', monospace;
+            background: #f1f3f4;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bots-table {
+                font-size: 14px;
+            }
+
+            .bots-table th,
+            .bots-table td {
+                padding: 10px;
+            }
+
+            .webhook-url {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🤖 机器人管理控制台</h1>
+            <div class="nav-links">
+                <a href="/">注册机器人</a>
+                <a href="/web/">文档中心</a>
+                <a href="/web/api-usage.html">API文档</a>
+                <a href="/web/windows-binary.html">工具下载</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计信息 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalBots">-</div>
+                <div class="stat-label">已注册机器人</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayBots">-</div>
+                <div class="stat-label">今日新增</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeBots">-</div>
+                <div class="stat-label">活跃机器人</div>
+            </div>
+        </div>
+
+        <!-- 机器人列表 -->
+        <div class="bots-section">
+            <div class="section-header">
+                <h2 class="section-title">已注册的机器人</h2>
+                <button class="refresh-btn" onclick="loadBots()">🔄 刷新</button>
+            </div>
+            <div id="botsContent">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    正在加载机器人列表...
+                </div>
+            </div>
+        </div>
+
+        <!-- 配置信息 -->
+        <div class="config-section">
+            <h2 class="section-title" style="margin-bottom: 20px;">🔧 使用配置</h2>
+            <div class="config-item">
+                <span class="config-label">API 端点</span>
+                <span class="config-value" id="apiEndpoint">-</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">发送消息</span>
+                <span class="config-value">POST /send</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">上传文件</span>
+                <span class="config-value">POST /upload</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">发送文件</span>
+                <span class="config-value">POST /sendfile</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取当前服务器地址
+        const serverUrl = window.location.origin;
+        document.getElementById('apiEndpoint').textContent = serverUrl;
+
+        // 加载机器人列表
+        async function loadBots() {
+            const content = document.getElementById('botsContent');
+            content.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    正在加载机器人列表...
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/bots');
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    updateStats(result.data);
+                    renderBotsTable(result.data);
+                } else {
+                    throw new Error('获取数据失败');
+                }
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="error">
+                        ❌ 加载失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // 更新统计信息
+        function updateStats(bots) {
+            const total = bots.length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayCount = bots.filter(bot => 
+                bot.created_at && bot.created_at.startsWith(today)
+            ).length;
+
+            document.getElementById('totalBots').textContent = total;
+            document.getElementById('todayBots').textContent = todayCount;
+            document.getElementById('activeBots').textContent = total; // 简化处理，认为所有机器人都是活跃的
+        }
+
+        // 渲染机器人表格
+        function renderBotsTable(bots) {
+            const content = document.getElementById('botsContent');
+
+            if (bots.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🤖</div>
+                        <h3>暂无已注册的机器人</h3>
+                        <p>点击 <a href="/">注册机器人</a> 开始使用</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHtml = `
+                <table class="bots-table">
+                    <thead>
+                        <tr>
+                            <th>机器人 ID</th>
+                            <th>安全码</th>
+                            <th>Webhook URL</th>
+                            <th>注册时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bots.map(bot => `
+                            <tr>
+                                <td><span class="bot-id">#${bot.id}</span></td>
+                                <td><span class="security-code">${bot.security_code}</span></td>
+                                <td><span class="webhook-url" title="${bot.url}">${bot.url}</span></td>
+                                <td><span class="created-time">${formatDate(bot.created_at)}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            content.innerHTML = tableHtml;
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBots();
+        });
+    </script>
+</body>
+</html>
