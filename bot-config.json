@@ -1,0 +1,7 @@
+{
+  "server_url": "localhost",
+  "port": "8080",
+  "bot_id": 2,
+  "security_code": "097",
+  "protocol": "http"
+}

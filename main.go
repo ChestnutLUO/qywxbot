@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,7 +127,6 @@ type JumpItem struct {
 
 
 
-
 var (
 	db    *sql.DB
 	tmpls *template.Template
@@ -134,11 +134,13 @@ var (
 )
 
 type SuccessData struct {
-	ID            int64
-	SecurityCode  string
-	SendURL       string
-	CurlExample   string
-	BotExeExample string
+	ID                int64
+	SecurityCode      string
+	SendURL           string
+	CurlExample       string
+	BotExeExample     string
+	BotExeSimple      string
+	ConfigFileContent string
 }
 
 
@@ -152,7 +154,6 @@ type Bot struct {
 
 func main() {
 	loadConfig()
-	manageCertificate()
 
 	var err error
 	db, err = sql.Open("sqlite3", "./bots.db")
@@ -162,6 +163,13 @@ func main() {
 	defer db.Close()
 
 	createTable()
+
+	if len(os.Args) > 1 {
+		handleCommandLine()
+		return
+	}
+
+	manageCertificate()
 
 	tmpls = template.Must(template.ParseGlob("templates/*.html"))
 
@@ -173,10 +181,6 @@ func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	log.Println("注册发送文件处理器: /sendfile")
 	http.HandleFunc("/sendfile", sendfileHandler)
-	log.Println("注册控制台处理器: /console")
-	http.HandleFunc("/console", consoleHandler)
-	log.Println("注册 Bot API 处理器: /api/bots")
-	http.HandleFunc("/api/bots", botAPIHandler)
 
 	log.Println("注册静态文件服务: /web/")
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
@@ -405,7 +409,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 			err = tmpls.ExecuteTemplate(w, "success.html", data)
 			if err != nil {
-				http.Error(w, "无法呈现成功页面", http.StatusInternalServerError)
+				http.Error(w, "无法呈现成功���面", http.StatusInternalServerError)
 			}
 			return
 		}
@@ -436,26 +440,82 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("发送确认消息失败 %s: %v", url, err)
 		}
 
-		botExeExampleForMsg := fmt.Sprintf(`bot.exe send %s %s %d %s "来自 bot.exe 的消息"`, serverAddr, port, id, securityCode)
-		winBotMessage := fmt.Sprintf("使用以下命令在 Windows Terminal 或者 PowerShell 中使用 bot.exe 发送消息。\n```\n%s\n```", botExeExampleForMsg)
-
-		err = sendMarkdownMessage(url, winBotMessage)
+		// 发送配置文件
+		serverURL := getServerURL()
+		err = sendConfigFile(url, id, securityCode, serverURL)
 		if err != nil {
-			log.Printf("发送 Windows bot 提醒消息失败 %s: %v", url, err)
+			log.Printf("发送配置文件失败 %s: %v", url, err)
 		}
 
-		serverURL := getServerURL()
+		// 发送简化命令使用提示
+		simpleCommandMessage := fmt.Sprintf(` Windows 使用方法
+
+**第一步：下载配置文件**
+从上面的文件中下载 bot-config.json 文件，放在 bot.exe 同目录下。
+
+**第二步：使用简化命令**
+现在你可以使用简化命令发送消息：
+` + "```" + `
+bot.exe send "你的消息"
+bot.exe sendfile "文件路径"
+bot.exe upload "文件路径"
+` + "```" + `
+
+**兼容模式**
+传统完整参数方式仍然支持：
+` + "```" + `
+bot.exe send %s %s %d %s "来自 bot.exe 的消息"
+` + "```", serverAddr, port, id, securityCode)
+
+		err = sendMarkdownMessage(url, simpleCommandMessage)
+		if err != nil {
+			log.Printf("发送简化命令提示失败 %s: %v", url, err)
+		}
+
+		// 发送 Linux 使用方法
+		linuxMessage := fmt.Sprintf(`Linux/macOS 使用方法
+
+**前提条件：需要安装 curl**
+` + "```bash" + `
+# Ubuntu/Debian
+sudo apt-get install curl
+
+# CentOS/RHEL/Fedora
+sudo yum install curl
+# 或者 (较新版本)
+sudo dnf install curl
+
+# macOS
+brew install curl
+` + "```" + `
+
+**使用 Shell 脚本 (推荐)**
+从上面的文件中下载 bot.sh 脚本，然后：
+` + "```bash" + `
+chmod +x bot.sh
+./bot.sh send "你的消息"
+./bot.sh sendfile "/path/to/file"
+` , id, securityCode, serverURL)
+
+		err = sendMarkdownMessage(url, linuxMessage)
+		if err != nil {
+			log.Printf("发送 Linux 使用提示失败 %s: %v", url, err)
+		}
+
 		sendURL := fmt.Sprintf("%s/send", serverURL)
 		curlExample := fmt.Sprintf(`curl -X POST -H "Content-Type: application/json" -d '{"id": %d, "security_code": "%s", "msgtype": "text", "content": "Hello from your bot!"}' %s`, id, securityCode, sendURL)
 
 		botExeExample := fmt.Sprintf(`bot.exe send %s %s %d %s "来自 bot.exe 的消息"`, serverAddr, port, id, securityCode)
+		botExeSimple := `bot.exe send "你的消息"`
 
 		data := SuccessData{
-			ID:            id,
-			SecurityCode:  securityCode,
-			SendURL:       sendURL,
-			CurlExample:   curlExample,
-			BotExeExample: botExeExample,
+			ID:                id,
+			SecurityCode:      securityCode,
+			SendURL:           sendURL,
+			CurlExample:       curlExample,
+			BotExeExample:     botExeExample,
+			BotExeSimple:      botExeSimple,
+			ConfigFileContent: generateConfigFileContent(id, securityCode, serverURL),
 		}
 
 		err = sendBotScripts(url, id, securityCode, serverURL)
@@ -555,7 +615,7 @@ func sendMarkdownMessage(url, content string) error {
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("接收到来自 %s 的请求: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
-		log.Printf("方法不允许: %s", r.Method)
+		log.Printf("方法不允���: %s", r.Method)
 		http.Error(w, "仅支持 POST 方法", http.StatusMethodNotAllowed)
 		return
 	}
@@ -624,7 +684,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if uploadResp.ErrCode != 0 {
-		http.Error(w, fmt.Sprintf("文件��传错误: %s", uploadResp.ErrMsg), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("文件发送错误: %s", uploadResp.ErrMsg), http.StatusInternalServerError)
 		return
 	}
 
@@ -853,6 +913,114 @@ func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL stri
 	return nil
 }
 
+// 生成配置文件内容
+func generateConfigFileContent(botID int64, securityCode, serverURL string) string {
+	// 解析服务器URL获取协议、主机和端口
+	protocol := "http"
+	host := "localhost"
+	port := "8080"
+
+	if strings.HasPrefix(serverURL, "https://") {
+		protocol = "https"
+		serverURL = strings.TrimPrefix(serverURL, "https://")
+	} else if strings.HasPrefix(serverURL, "http://") {
+		protocol = "http"
+		serverURL = strings.TrimPrefix(serverURL, "http://")
+	}
+
+	// 分离主机和端口
+	if strings.Contains(serverURL, ":") {
+		parts := strings.Split(serverURL, ":")
+		host = parts[0]
+		port = parts[1]
+	} else {
+		host = serverURL
+		if protocol == "https" {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+
+	configContent := fmt.Sprintf(`{
+  "server_url": "%s",
+  "port": "%s",
+  "bot_id": %d,
+  "security_code": "%s",
+  "protocol": "%s"
+}`, host, port, botID, securityCode, protocol)
+
+	return configContent
+}
+
+// 发送配置文件到企业微信
+func sendConfigFile(webhookURL string, botID int64, securityCode, serverURL string) error {
+	// 生成配置文件内容
+	configContent := generateConfigFileContent(botID, securityCode, serverURL)
+
+	// 创建临时配置文件
+	tempFile, err := os.CreateTemp("", fmt.Sprintf("bot_%d_config.json", botID))
+	if err != nil {
+		return fmt.Errorf("创建临时配置文件失败: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+
+	// 写入配置内容
+	_, err = tempFile.WriteString(configContent)
+	if err != nil {
+		return fmt.Errorf("写入配置文件失败: %v", err)
+	}
+	tempFile.Close()
+
+	// 上传配置文件到企业微信
+	key := strings.Split(webhookURL, "?key=")[1]
+	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", key)
+
+	file, err := os.Open(tempFile.Name())
+	if err != nil {
+		return fmt.Errorf("打开配置文件失败: %v", err)
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("media", "bot-config.json")
+	if err != nil {
+		return fmt.Errorf("创建表单文件失败: %v", err)
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("复制文件内容失败: %v", err)
+	}
+	writer.Close()
+
+	req, err := http.NewRequest("POST", uploadURL, body)
+	if err != nil {
+		return fmt.Errorf("创建上传请求失败: %v", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("上传配置文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var uploadResp UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&uploadResp); err != nil {
+		return fmt.Errorf("解析上传响应失败: %v", err)
+	}
+
+	if uploadResp.ErrCode != 0 {
+		return fmt.Errorf("配置文件上传错误: %s", uploadResp.ErrMsg)
+	}
+
+	// 发送文件消息
+	return sendFileMessage(webhookURL, uploadResp.MediaID)
+}
+
 func sendBotScript(webhookURL string, botID int64, securityCode, serverURL, scriptName string) error {
 	// 读取脚本模板
 	templateContent, err := os.ReadFile(scriptName)
@@ -935,7 +1103,7 @@ func sendBotBinary(webhookURL string, botID int64, securityCode, binaryName stri
 		return fmt.Errorf("二进制文件 %s 不存在", binaryName)
 	}
 
-	// 上传二进制文件到企业微信
+	// 上传二进��文件到企业微信
 	key := strings.Split(webhookURL, "?key=")[1]
 	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", key)
 
@@ -981,4 +1149,138 @@ func sendBotBinary(webhookURL string, botID int64, securityCode, binaryName stri
 
 	// 发送文件消息
 	return sendFileMessage(webhookURL, uploadResp.MediaID)
+}
+
+func handleCommandLine() {
+	command := os.Args[1]
+	switch command {
+	case "list":
+		listBots()
+	case "add":
+		if len(os.Args) < 3 {
+			fmt.Println("用法: ./qywxbot_server add <url>")
+			return
+		}
+		addBot(os.Args[2])
+	case "delete":
+		if len(os.Args) < 3 {
+			fmt.Println("用法: ./qywxbot_server delete <id>")
+			return
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("无效的 ID")
+			return
+		}
+		deleteBot(id)
+	case "update":
+		if len(os.Args) < 4 {
+			fmt.Println("用法: ./qywxbot_server update <id> <new_url>")
+			return
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("无效的 ID")
+			return
+		}
+		updateBot(id, os.Args[3])
+	case "send":
+		if len(os.Args) < 4 {
+			fmt.Println("用法: ./qywxbot_server send <id> <message>")
+			return
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("无效的 ID")
+			return
+		}
+		// 将所���剩余部分拼接为消息
+		message := strings.Join(os.Args[3:], " ")
+		sendBotMessage(id, message)
+	default:
+		fmt.Println("未知命令:", command)
+		fmt.Println("可用命令: list, add, delete, update, send")
+	}
+}
+
+func listBots() {
+	rows, err := db.Query("SELECT id, url, security_code, created_at FROM bots ORDER BY id")
+	if err != nil {
+		log.Fatalf("查询机器人失败: %v", err)
+	}
+	defer rows.Close()
+
+	fmt.Println("已注册的机器人:")
+	fmt.Println("======================================================================================================================")
+	fmt.Printf("%-5s | %-80s | %-15s | %-25s\n", "ID", "URL", "安全码", "创建时间")
+	fmt.Println("----------------------------------------------------------------------------------------------------------------------")
+
+	for rows.Next() {
+		var bot Bot
+		if err := rows.Scan(&bot.ID, &bot.URL, &bot.SecurityCode, &bot.CreatedAt); err != nil {
+			log.Fatalf("扫描机器人行失败: %v", err)
+		}
+		fmt.Printf("%-5d | %-80s | %-15s | %-25s\n", bot.ID, bot.URL, bot.SecurityCode, bot.CreatedAt)
+	}
+	fmt.Println("======================================================================================================================")
+}
+
+func addBot(url string) {
+	mrand.Seed(time.Now().UnixNano())
+	securityCode := fmt.Sprintf("%03d", mrand.Intn(1000))
+	id, err := insertBot(url, securityCode)
+	if err != nil {
+		log.Fatalf("添加机器人失败: %v", err)
+	}
+	fmt.Printf("机器人添加成功!\nID: %d\n安全码: %s\n", id, securityCode)
+}
+
+func deleteBot(id int) {
+	res, err := db.Exec("DELETE FROM bots WHERE id = ?", id)
+	if err != nil {
+		log.Fatalf("删除机器人失败: %v", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Fatalf("获取影响行数失败: %v", err)
+	}
+	if rowsAffected == 0 {
+		fmt.Printf("未找到 ID 为 %d 的机器人\n", id)
+	} else {
+		fmt.Printf("ID 为 %d 的机器人删除成功。\n", id)
+	}
+}
+
+func updateBot(id int, newURL string) {
+	res, err := db.Exec("UPDATE bots SET url = ? WHERE id = ?", newURL, id)
+	if err != nil {
+		log.Fatalf("更新机器人失败: %v", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Fatalf("获取影响行数失败: %v", err)
+	}
+	if rowsAffected == 0 {
+		fmt.Printf("未找到 ID 为 %d 的机器人\n", id)
+	} else {
+		fmt.Printf("ID 为 %d 的机器人更新成功。\n", id)
+	}
+}
+
+func sendBotMessage(id int, message string) {
+	var botURL string
+	err := db.QueryRow("SELECT url FROM bots WHERE id = ?", id).Scan(&botURL)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Fatalf("未找到 ID 为 %d 的机器人", id)
+		} else {
+			log.Fatalf("数据库错误: %v", err)
+		}
+	}
+
+	err = sendTextMessage(botURL, message)
+	if err != nil {
+		log.Fatalf("发送消息失败: %v", err)
+	}
+	fmt.Println("消息发送成功。")
 }

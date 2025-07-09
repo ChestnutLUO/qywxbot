@@ -160,18 +160,83 @@
         <h1>bot.exe - Windows 二进制程序</h1>
         <span class="platform">Windows Binary</span>
         
+        <div class="success">
+            <h3>🎉 新功能：配置文件支持</h3>
+            <p><strong>现在 bot.exe 支持配置文件！</strong>无需每次输入完整参数，使用体验更接近 Linux 脚本。</p>
+            <ul>
+                <li><strong>简化命令：</strong>配置一次，永久使用</li>
+                <li><strong>自动配置：</strong>注册机器人时自动生成配置文件</li>
+                <li><strong>向后兼容：</strong>传统完整参数方式仍然支持</li>
+            </ul>
+        </div>
+        
         <div class="note">
             <h3>程序说明</h3>
-            <p><strong>bot.exe</strong> 是用 Go 语言编写的跨平台命令行工具，为 Windows 用户提供强大的企业微信机器人操作功能。当您成功注册机器人后，系统会自动将此程序发送到您的企业微信群中。</p>
+            <p><strong>bot.exe</strong> 是用 Go 语言编写的跨平台命令行工具，为 Windows 用户提供强大的企业微信机器人操作功能。当您成功注册机器人后，系统会自动将此程序和配置文件发送到您的企业微信群中。</p>
         </div>
         
         <div class="success">
-            <h3>获取程序</h3>
+            <h3>获取程序和配置</h3>
             <ul>
-                <li><strong>自动获取：</strong>注册机器人成功后，bot.exe 会自动发送到您的企业微信群</li>
+                <li><strong>自动获取：</strong>注册机器人成功后，bot.exe 和 bot-config.json 会自动发送到您的企业微信群</li>
+                <li><strong>配置文件：</strong>下载 bot-config.json 并放在 bot.exe 同目录下</li>
                 <li><strong>手动下载：</strong>也可以联系管理员获取最新版本</li>
             </ul>
         </div>
+        
+        <h2>配置文件功能 (推荐)</h2>
+        
+        <div class="feature-box">
+            <h3>📁 配置文件设置</h3>
+            <p>使用配置文件可以大大简化命令行参数，提供类似 Linux 脚本的使用体验。</p>
+            
+            <h4>第一步：初始化配置</h4>
+            <pre><code># 交互式配置
+bot.exe init
+
+# 或者直接下载注册时发送的 bot-config.json 文件</code></pre>
+            
+            <h4>第二步：配置文件内容 (bot-config.json)</h4>
+            <pre><code>{
+  "server_url": "localhost",
+  "port": "8080",
+  "bot_id": 1,
+  "security_code": "123",
+  "protocol": "http"
+}</code></pre>
+        </div>
+        
+        <div class="command-box">
+            <h3>🚀 简化命令语法</h3>
+            <strong>配置文件模式：</strong><br>
+            <code>bot.exe &lt;命令&gt; &lt;参数&gt;</code><br><br>
+            <strong>传统模式：</strong><br>
+            <code>bot.exe &lt;命令&gt; &lt;服务器地址&gt; &lt;端口&gt; &lt;机器人ID&gt; &lt;安全码&gt; &lt;参数&gt;</code>
+        </div>
+        
+        <h2>配置管理命令</h2>
+        <table>
+            <tr>
+                <th>命令</th>
+                <th>功能描述</th>
+                <th>使用示例</th>
+            </tr>
+            <tr>
+                <td><code>init</code></td>
+                <td>初始化配置文件</td>
+                <td><code>bot.exe init</code></td>
+            </tr>
+            <tr>
+                <td><code>config</code></td>
+                <td>查看当前配置</td>
+                <td><code>bot.exe config</code></td>
+            </tr>
+            <tr>
+                <td><code>help</code></td>
+                <td>显示帮助信息</td>
+                <td><code>bot.exe help</code></td>
+            </tr>
+        </table>
         
         <h2>基本用法</h2>
         <div class="command-box">
@@ -185,31 +250,53 @@
                 <th>命令</th>
                 <th>参数</th>
                 <th>功能描述</th>
-                <th>返回结果</th>
+                <th>简化命令示例</th>
+                <th>完整命令示例</th>
             </tr>
             <tr>
                 <td><code>send</code></td>
                 <td>&lt;消息内容&gt;</td>
                 <td>发送 Markdown 格式的文本消息</td>
-                <td>发送状态</td>
+                <td><code>bot.exe send "你的消息"</code></td>
+                <td><code>bot.exe send localhost 8080 1 123 "你的消息"</code></td>
             </tr>
             <tr>
                 <td><code>sendfile</code></td>
                 <td>&lt;文件路径&gt;</td>
                 <td>上传并发送文件到群聊</td>
-                <td>发送状态 + MediaID</td>
+                <td><code>bot.exe sendfile "report.pdf"</code></td>
+                <td><code>bot.exe sendfile localhost 8080 1 123 "report.pdf"</code></td>
             </tr>
             <tr>
                 <td><code>upload</code></td>
                 <td>&lt;文件路径&gt;</td>
                 <td>仅上传文件，返回 media_id</td>
-                <td>MediaID（用于后续发送）</td>
+                <td><code>bot.exe upload "file.txt"</code></td>
+                <td><code>bot.exe upload localhost 8080 1 123 "file.txt"</code></td>
             </tr>
         </table>
         
         <h2>使用示例</h2>
         
-        <h3>发送文本消息</h3>
+        <div class="success">
+            <h3>🎯 推荐：使用简化命令</h3>
+            <p>配置文件设置完成后，您可以享受简洁的命令行体验：</p>
+        </div>
+        
+        <h3>简化命令示例</h3>
+        <pre><code># 发送简单文本消息
+bot.exe send "服务器运行正常"
+
+# 发送 Markdown 格式消息
+bot.exe send "### 系统警告\n请立即检查系统状态"
+
+# 发送文件
+bot.exe sendfile "report.pdf"
+
+# 上传文件获取 MediaID
+bot.exe upload "file.txt"</code></pre>
+        
+        <h3>传统完整命令示例</h3>
         <pre><code># 发送简单文本消息
 bot.exe send localhost 8080 1 123 "服务器运行正常"
 
@@ -219,7 +306,7 @@ bot.exe send localhost 8080 1 123 "### 系统警告\n请立即检查系统状态
 # 发送包含链接的消息
 bot.exe send localhost 8080 1 123 "### 系统状态\n\n**状态**: 正常\n**时间**: 2024-07-07\n\n[查看详情](http://monitor.example.com)"</code></pre>
         
-        <h3>发送文件</h3>
+        <h3>文件操作示例</h3>
         <pre><code># 发送当前目录下的文件
 bot.exe sendfile localhost 8080 1 123 "report.pdf"
 
@@ -239,9 +326,49 @@ bot.exe upload localhost 8080 1 123 "C:\docs\file.txt"
         
         <h2>高级应用</h2>
         
-        <h3>创建便捷批处理脚本</h3>
+        <h3>简化命令便捷脚本</h3>
         <div class="feature-box">
-            <h4>quick-bot.bat</h4>
+            <h4>quick-simple.bat（推荐）</h4>
+            <p>基于配置文件的简化脚本，无需重复配置服务器信息：</p>
+            <pre><code>@echo off
+:: 基于配置文件的简化脚本
+
+:: 快捷命令处理
+if "%1"=="msg" (
+    bot.exe send "%~2"
+    goto :eof
+)
+
+if "%1"=="file" (
+    bot.exe sendfile "%~2"
+    goto :eof
+)
+
+if "%1"=="upload" (
+    bot.exe upload "%~2"
+    goto :eof
+)
+
+:: 显示帮助
+echo 企业微信机器人快捷工具（简化版）
+echo.
+echo 前提：已配置 bot-config.json 文件
+echo.
+echo 用法:
+echo   %0 msg "消息内容"      - 发送消息
+echo   %0 file "文件路径"     - 发送文件  
+echo   %0 upload "文件路径"   - 上传文件
+echo.
+echo 示例:
+echo   %0 msg "系统状态正常"
+echo   %0 file "C:\reports\daily.pdf"
+echo   %0 upload "C:\logs\system.log"</code></pre>
+        </div>
+        
+        <h3>传统完整参数脚本</h3>
+        <div class="feature-box">
+            <h4>quick-full.bat</h4>
+            <p>传统完整参数方式，适用于多机器人管理：</p>
             <pre><code>@echo off
 :: 配置信息
 set SERVER=your-server.com
@@ -316,8 +443,52 @@ if %errorlevel% equ 0 (
         </div>
         
         <h3>PowerShell 集成</h3>
+        
         <div class="feature-box">
-            <h4>PowerShell 函数库</h4>
+            <h4>PowerShell 简化函数库（推荐）</h4>
+            <p>基于配置文件的 PowerShell 函数，更简洁易用：</p>
+            <pre><code># bot-simple-functions.ps1
+function Send-BotMessage {
+    param([string]$Message)
+    & .\bot.exe send $Message
+}
+
+function Send-BotFile {
+    param([string]$FilePath)
+    if (Test-Path $FilePath) {
+        & .\bot.exe sendfile $FilePath
+    } else {
+        Write-Host "文件不存在: $FilePath" -ForegroundColor Red
+    }
+}
+
+function Upload-BotFile {
+    param([string]$FilePath)
+    if (Test-Path $FilePath) {
+        & .\bot.exe upload $FilePath
+    } else {
+        Write-Host "文件不存在: $FilePath" -ForegroundColor Red
+    }
+}
+
+function Show-BotConfig {
+    & .\bot.exe config
+}
+
+function Initialize-BotConfig {
+    & .\bot.exe init
+}
+
+# 使用示例
+# . .\bot-simple-functions.ps1
+# Send-BotMessage "PowerShell 脚本执行完成"
+# Send-BotFile "C:\logs\execution.log"
+# Show-BotConfig</code></pre>
+        </div>
+        
+        <div class="feature-box">
+            <h4>PowerShell 传统函数库</h4>
+            <p>传统完整参数方式，适用于多机器人管理：</p>
             <pre><code># bot-functions.ps1
 $global:BotConfig = @{
     Server = "your-server.com"
@@ -356,6 +527,17 @@ function Upload-BotFile {
         </div>
         
         <h2>程序特性</h2>
+        <div class="feature-box">
+            <h3>🎉 新功能优势</h3>
+            <ul>
+                <li><strong>🔧 配置文件支持</strong>：一次配置，永久使用，告别重复参数</li>
+                <li><strong>🚀 简化命令</strong>：类似 Linux 脚本的使用体验</li>
+                <li><strong>🔄 自动生成</strong>：注册时自动创建配置文件</li>
+                <li><strong>📋 向后兼容</strong>：完全兼容传统完整参数模式</li>
+                <li><strong>🎯 智能检测</strong>：自动识别使用模式，无需手动切换</li>
+            </ul>
+        </div>
+        
         <div class="feature-box">
             <h3>✨ 核心优势</h3>
             <ul>
@@ -420,14 +602,28 @@ if ($LASTEXITCODE -eq 0) {
 }</code></pre>
         
         <h2>最佳实践</h2>
-        <ul>
-            <li><strong>🔧 配置管理：</strong>将服务器信息存储在配置文件或环境变量中</li>
-            <li><strong>📝 日志记录：</strong>在自动化脚本中记录执行日志便于排查问题</li>
-            <li><strong>⏰ 频率控制：</strong>合理控制消息发送频率，避免被限流</li>
-            <li><strong>🔄 错误重试：</strong>在关键应用中实现失败重试机制</li>
-            <li><strong>🛡️ 安全存储：</strong>安全存储机器人 ID 和安全码，避免硬编码</li>
-            <li><strong>🧪 测试验证：</strong>在生产环境使用前先在测试环境验证功能</li>
-        </ul>
+        
+        <div class="feature-box">
+            <h3>🔧 配置文件管理</h3>
+            <ul>
+                <li><strong>📁 文件位置</strong>：将 bot-config.json 放在 bot.exe 同目录下</li>
+                <li><strong>🔐 权限设置</strong>：设置适当的文件权限，避免配置泄露</li>
+                <li><strong>💾 备份配置</strong>：定期备份配置文件以防丢失</li>
+                <li><strong>🔄 版本控制</strong>：不要将配置文件提交到代码仓库</li>
+                <li><strong>🌐 环境分离</strong>：为不同环境创建独立的配置文件</li>
+            </ul>
+        </div>
+        
+        <div class="feature-box">
+            <h3>🛠️ 开发建议</h3>
+            <ul>
+                <li><strong>📝 日志记录</strong>：在自动化脚本中记录执行日志便于排查问题</li>
+                <li><strong>⏰ 频率控制</strong>：合理控制消息发送频率，避免被限流</li>
+                <li><strong>🔄 错误重试</strong>：在关键应用中实现失败重试机制</li>
+                <li><strong>🛡️ 安全存储</strong>：安全存储机器人 ID 和安全码，避免硬编码</li>
+                <li><strong>🧪 测试验证</strong>：在生产环境使用前先在测试环境验证功能</li>
+            </ul>
+        </div>
         
         <div class="note">
             <h3>💡 技术支持</h3>

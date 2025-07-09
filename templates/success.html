@@ -93,10 +93,25 @@
                     与机器人交互。您刚刚应该已经通过机器人文件助手收到了此脚本。
                 </p>
                 <pre><code>./bot.sh send "你的消息"</code></pre>
-                <h4>使用 Windows 命令行工具</h4>
+                
+                <h4>Windows 简化命令 (推荐)</h4>
                 <p>
-                    您也可以在 Windows 命令行中使用
-                    <code>bot.exe</code> 与机器人交互。
+                    <strong>🎉 新功能：</strong>Windows 用户现在可以使用简化命令！
+                </p>
+                <div class="info-box">
+                    <p><strong>第一步：</strong>下载配置文件 <code>bot-config.json</code> 并放在 <code>bot.exe</code> 同目录下</p>
+                    <p><strong>第二步：</strong>使用简化命令发送消息</p>
+                </div>
+                <pre><code>{{.BotExeSimple}}
+bot.exe sendfile "文件路径"
+bot.exe upload "文件路径"</code></pre>
+
+                <h4>配置文件内容 (bot-config.json)</h4>
+                <pre><code>{{.ConfigFileContent}}</code></pre>
+
+                <h4>Windows 兼容模式</h4>
+                <p>
+                    传统完整参数方式仍然支持：
                 </p>
                 <pre><code>{{.BotExeExample}}</code></pre>
 
