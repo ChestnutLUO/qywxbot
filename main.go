@@ -165,13 +165,20 @@ func main() {
 
 	tmpls = template.Must(template.ParseGlob("templates/*.html"))
 
+	log.Println("注册根路径处理器: /")
 	http.HandleFunc("/", handler)
+	log.Println("注册发送消息处理器: /send")
 	http.HandleFunc("/send", sendHandler)
+	log.Println("注册上传文件处理器: /upload")
 	http.HandleFunc("/upload", uploadHandler)
+	log.Println("注册发送文件处理器: /sendfile")
 	http.HandleFunc("/sendfile", sendfileHandler)
+	log.Println("注册控制台处理器: /console")
 	http.HandleFunc("/console", consoleHandler)
+	log.Println("注册 Bot API 处理器: /api/bots")
 	http.HandleFunc("/api/bots", botAPIHandler)
 
+	log.Println("注册静态文件服务: /web/")
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	if config.CertFile != "" && config.KeyFile != "" {
@@ -350,23 +357,28 @@ func createTable() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("接收到来自 %s 的请求: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	if r.Method == http.MethodPost {
 		url := r.FormValue("url")
 		if url == "" {
+			log.Printf("处理请求失败: URL 为空")
 			http.Error(w, "URL 为必填项", http.StatusBadRequest)
 			return
 		}
+		log.Printf("收到新的机器人注册请求，URL: %s", url)
 
 		// Check if the bot already exists
 		var existingID int
 		var existingCode string
 		err := db.QueryRow("SELECT id, security_code FROM bots WHERE url = ?", url).Scan(&existingID, &existingCode)
 		if err != nil && err != sql.ErrNoRows {
+			log.Printf("数据库查询失败: %v", err)
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 			return
 		}
 
 		if existingID != 0 {
+			log.Printf("机器人已存在，ID: %d。直接显示信息。", existingID)
 			// Bot already exists, just show the info page without sending notifications.
 			serverURL := getServerURL()
 			sendURL := fmt.Sprintf("%s/send", serverURL)
@@ -400,11 +412,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		mrand.Seed(time.Now().UnixNano())
 		securityCode := fmt.Sprintf("%03d", mrand.Intn(1000))
 
+		log.Printf("正在为 URL %s 插入新的机器人记录", url)
 		id, err := insertBot(url, securityCode)
 		if err != nil {
+			log.Printf("插入机器人记录失败: %v", err)
 			http.Error(w, "机器人注册失败", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("新机器人注册成功，ID: %d", id)
 
 		serverAddr := "localhost"
 		if config.Domain != "" {
@@ -459,27 +474,34 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("接收到来自 %s 的请求: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
+		log.Printf("方法不允许: %s", r.Method)
 		http.Error(w, "仅支持 POST 方法", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("解析请求体失败: %v", err)
 		http.Error(w, "无效的请求体", http.StatusBadRequest)
 		return
 	}
+	log.Printf("收到发送消息请求: Bot ID=%d, MsgType=%s", req.ID, req.MsgType)
 
 	var botURL string
 	err := db.QueryRow("SELECT url FROM bots WHERE id = ? AND security_code = ?", req.ID, req.SecurityCode).Scan(&botURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Printf("未找到机器人或安全码不正确: Bot ID=%d", req.ID)
 			http.Error(w, "未找到机器人或安全码不正确", http.StatusNotFound)
 		} else {
+			log.Printf("数据库错误: %v", err)
 			http.Error(w, "数据库错误", http.StatusInternalServerError)
 		}
 		return
 	}
+	log.Printf("找到机器人 URL: %s (ID: %d)", botURL, req.ID)
 
 	var sendErr error
 	switch req.MsgType {
@@ -496,9 +518,11 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if sendErr != nil {
+		log.Printf("发送消息失败 (Bot ID: %d): %v", req.ID, sendErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": sendErr.Error()})
 	} else {
+		log.Printf("消息发送成功 (Bot ID: %d)", req.ID)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "消息发送成功"})
 	}
@@ -529,7 +553,9 @@ func sendMarkdownMessage(url, content string) error {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("接收到来自 %s 的请求: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
+		log.Printf("方法不允许: %s", r.Method)
 		http.Error(w, "仅支持 POST 方法", http.StatusMethodNotAllowed)
 		return
 	}
@@ -607,7 +633,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendfileHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("接收到来自 %s 的请求: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
+		log.Printf("方法不允许: %s", r.Method)
 		http.Error(w, "仅支持 POST 方法", http.StatusMethodNotAllowed)
 		return
 	}
@@ -715,15 +743,21 @@ func sendFileMessage(url, mediaID string) error {
 }
 
 func postMessage(url string, payload []byte) error {
+	log.Printf("正在向 %s 发送消息...", url)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
+		log.Printf("发送消息到 %s 失败: %v", url, err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("发送消息失败，状态码: %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("发送消息到 %s 返回非 200 状态码: %d, 响应: %s", url, resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("发送消息失败，状态码: %d, 响应: %s", resp.StatusCode, string(bodyBytes))
 	}
+
+	log.Printf("成功发送消息到 %s", url)
 	return nil
 }
 
