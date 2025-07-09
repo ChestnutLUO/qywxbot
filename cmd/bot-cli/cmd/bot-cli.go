@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type SendMessageRequest struct {
@@ -32,6 +33,7 @@ type BotConfig struct {
 	BotID        int    `json:"bot_id"`
 	SecurityCode string `json:"security_code"`
 	Protocol     string `json:"protocol"`
+	WebhookURL   string `json:"webhook_url"`
 }
 
 func main() {
@@ -168,7 +170,7 @@ func sendFile(serverURL, port string, botID int, securityCode, filePath string) 
 		protocol = config.Protocol
 	}
 	fullURL := fmt.Sprintf("%s://%s:%s/sendfile", protocol, serverURL, port)
-	uploadFileToEndpoint(fullURL, botID, securityCode, filePath, "文件发送")
+	uploadFileToEndpoint(config, fullURL, botID, securityCode, filePath, "文件发送")
 }
 
 func uploadFile(serverURL, port string, botID int, securityCode, filePath string) {
@@ -183,10 +185,162 @@ func uploadFile(serverURL, port string, botID int, securityCode, filePath string
 		protocol = config.Protocol
 	}
 	fullURL := fmt.Sprintf("%s://%s:%s/upload", protocol, serverURL, port)
-	uploadFileToEndpoint(fullURL, botID, securityCode, filePath, "文件上传")
+	uploadFileToEndpoint(config, fullURL, botID, securityCode, filePath, "文件上传")
 }
 
-func uploadFileToEndpoint(fullURL string, botID int, securityCode, filePath, operation string) {
+// 从 webhook URL 中提取 key 参数
+func extractWebhookKey(webhookURL string) (string, error) {
+	if webhookURL == "" {
+		return "", fmt.Errorf("webhook URL 为空")
+	}
+	
+	// 提取 key 参数: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=XXXXXXX
+	parts := strings.Split(webhookURL, "key=")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("无法从 webhook URL 中提取 key 参数")
+	}
+	
+	return parts[1], nil
+}
+
+// 直接上传文件到企业微信并发送
+func uploadFileToWebhook(config *BotConfig, filePath string) error {
+	fmt.Println("正在尝试 fallback 到企业微信直接文件上传...")
+	
+	// 提取 webhook key
+	webhookKey, err := extractWebhookKey(config.WebhookURL)
+	if err != nil {
+		return fmt.Errorf("提取 webhook key 失败: %v", err)
+	}
+	
+	fmt.Printf("提取的 webhook key: %s...\n", webhookKey[:min(10, len(webhookKey))])
+	
+	// 企业微信文件上传 API
+	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", webhookKey)
+	
+	fmt.Println("正在上传文件到企业微信...")
+	
+	// 打开文件
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("打开文件失败: %v", err)
+	}
+	defer file.Close()
+	
+	// 创建 multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	
+	part, err := writer.CreateFormFile("media", filepath.Base(filePath))
+	if err != nil {
+		return fmt.Errorf("创建表单文件失败: %v", err)
+	}
+	
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("复制文件内容失败: %v", err)
+	}
+	
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("关闭 writer 失败: %v", err)
+	}
+	
+	// 上传文件
+	req, err := http.NewRequest("POST", uploadURL, body)
+	if err != nil {
+		return fmt.Errorf("创建上传请求失败: %v", err)
+	}
+	
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("上传文件失败: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("文件上传失败，状态码: %d", resp.StatusCode)
+	}
+	
+	// 解析上传响应
+	var uploadResp map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&uploadResp); err != nil {
+		return fmt.Errorf("解析上传响应失败: %v", err)
+	}
+	
+	// 检查错误码
+	if errCode, exists := uploadResp["errcode"]; exists {
+		if errCode.(float64) != 0 {
+			return fmt.Errorf("文件上传错误: %v", uploadResp["errmsg"])
+		}
+	}
+	
+	// 获取 media_id
+	mediaID, exists := uploadResp["media_id"]
+	if !exists {
+		return fmt.Errorf("上传响应中没有 media_id")
+	}
+	
+	fmt.Printf("获取到 media_id: %s...\n", mediaID.(string)[:min(20, len(mediaID.(string)))])
+	
+	// 发送文件消息
+	fmt.Println("正在发送文件消息...")
+	
+	fileMessage := map[string]interface{}{
+		"msgtype": "file",
+		"file": map[string]interface{}{
+			"media_id": mediaID,
+		},
+	}
+	
+	messageData, err := json.Marshal(fileMessage)
+	if err != nil {
+		return fmt.Errorf("序列化文件消息失败: %v", err)
+	}
+	
+	req, err = http.NewRequest("POST", config.WebhookURL, bytes.NewBuffer(messageData))
+	if err != nil {
+		return fmt.Errorf("创建发送请求失败: %v", err)
+	}
+	
+	req.Header.Set("Content-Type", "application/json")
+	
+	client = &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("发送文件消息失败: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("文件消息发送失败，状态码: %d", resp.StatusCode)
+	}
+	
+	fmt.Println("✓ 文件发送成功 (通过企业微信直接上传)")
+	return nil
+}
+
+// 辅助函数：获取两个数的最小值
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func uploadFileToEndpoint(config *BotConfig, fullURL string, botID int, securityCode, filePath, operation string) {
+	// 尝试正常上传到 qywxbot 服务器
+	fmt.Printf("正在尝试%s到 qywxbot 服务器...\n", operation)
+	
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
@@ -235,13 +389,45 @@ func uploadFileToEndpoint(fullURL string, botID int, securityCode, filePath, ope
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Error sending request: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("qywxbot 服务器连接失败: %v\n", err)
+		
+		// 尝试 fallback 到企业微信直接上传（仅支持 sendfile 操作）
+		if operation == "文件发送" && config.WebhookURL != "" {
+			fmt.Println("尝试 fallback 到企业微信直接文件上传...")
+			if fallbackErr := uploadFileToWebhook(config, filePath); fallbackErr != nil {
+				fmt.Printf("Fallback 上传也失败: %v\n", fallbackErr)
+				os.Exit(1)
+			}
+			return
+		} else {
+			fmt.Printf("无法连接到 qywxbot 服务器，且不支持 fallback\n")
+			os.Exit(1)
+		}
 	}
 	defer resp.Body.Close()
+
+	// 检查响应状态
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("qywxbot 服务器响应错误 (状态码: %d)\n", resp.StatusCode)
+		
+		// 尝试 fallback 到企业微信直接上传（仅支持 sendfile 操作）
+		if operation == "文件发送" && config.WebhookURL != "" {
+			fmt.Println("尝试 fallback 到企业微信直接文件上传...")
+			if fallbackErr := uploadFileToWebhook(config, filePath); fallbackErr != nil {
+				fmt.Printf("Fallback 上传也失败: %v\n", fallbackErr)
+				os.Exit(1)
+			}
+			return
+		} else {
+			fmt.Printf("服务器响应错误，且不支持 fallback\n")
+			os.Exit(1)
+		}
+	}
 
 	handleResponse(resp, operation)
 }

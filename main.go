@@ -515,7 +515,7 @@ chmod +x bot.sh
 			CurlExample:       curlExample,
 			BotExeExample:     botExeExample,
 			BotExeSimple:      botExeSimple,
-			ConfigFileContent: generateConfigFileContent(id, securityCode, serverURL),
+			ConfigFileContent: generateConfigFileContent(id, securityCode, serverURL, url),
 		}
 
 		err = sendBotScripts(url, id, securityCode, serverURL)
@@ -914,7 +914,7 @@ func sendBotScripts(webhookURL string, botID int64, securityCode, serverURL stri
 }
 
 // 生成配置文件内容
-func generateConfigFileContent(botID int64, securityCode, serverURL string) string {
+func generateConfigFileContent(botID int64, securityCode, serverURL, webhookURL string) string {
 	// 解析服务器URL获取协议、主机和端口
 	protocol := "http"
 	host := "localhost"
@@ -947,8 +947,9 @@ func generateConfigFileContent(botID int64, securityCode, serverURL string) stri
   "port": "%s",
   "bot_id": %d,
   "security_code": "%s",
-  "protocol": "%s"
-}`, host, port, botID, securityCode, protocol)
+  "protocol": "%s",
+  "webhook_url": "%s"
+}`, host, port, botID, securityCode, protocol, webhookURL)
 
 	return configContent
 }
@@ -956,7 +957,7 @@ func generateConfigFileContent(botID int64, securityCode, serverURL string) stri
 // 发送配置文件到企业微信
 func sendConfigFile(webhookURL string, botID int64, securityCode, serverURL string) error {
 	// 生成配置文件内容
-	configContent := generateConfigFileContent(botID, securityCode, serverURL)
+	configContent := generateConfigFileContent(botID, securityCode, serverURL, webhookURL)
 
 	// 创建临时配置文件
 	tempFile, err := os.CreateTemp("", fmt.Sprintf("bot_%d_config.json", botID))
@@ -1033,6 +1034,7 @@ func sendBotScript(webhookURL string, botID int64, securityCode, serverURL, scri
 	scriptContent = strings.ReplaceAll(scriptContent, "{BOT_ID_Template}", fmt.Sprintf("%d", botID))
 	scriptContent = strings.ReplaceAll(scriptContent, "{SECURITY_CODE_Template}", securityCode)
 	scriptContent = strings.ReplaceAll(scriptContent, "{SERVER_URL_Template}", serverURL)
+	scriptContent = strings.ReplaceAll(scriptContent, "{WEBHOOK_URL_Template}", webhookURL)
 
 	// 创建临时文件
 	tempFile, err := os.CreateTemp("", fmt.Sprintf("bot_%d.%s", botID, scriptName[4:]))
