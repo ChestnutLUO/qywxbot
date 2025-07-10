@@ -1,0 +1,345 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-server:
+    name: Build qywxbot_server
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            platform: linux-amd64
+          - goos: linux
+            goarch: arm64
+            platform: linux-arm64
+          - goos: windows
+            goarch: amd64
+            platform: windows-amd64
+            extension: .exe
+          - goos: darwin
+            goarch: amd64
+            platform: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            platform: darwin-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build qywxbot server
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+        run: |
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc-multilib
+            if [ "${{ matrix.goarch }}" = "arm64" ]; then
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+              export CC=aarch64-linux-gnu-gcc
+            fi
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc-mingw-w64
+            export CC=x86_64-w64-mingw32-gcc
+          fi
+          
+          # Build main server
+          go build -ldflags="-s -w" -o qywxbot_server${{ matrix.extension }} main.go
+
+      - name: Create server package
+        run: |
+          PACKAGE_NAME="qywxbot-server-${{ matrix.platform }}"
+          mkdir -p release/$PACKAGE_NAME
+          
+          # Copy main server binary
+          cp qywxbot_server${{ matrix.extension }} release/$PACKAGE_NAME/
+          
+          # Copy shell script (for Unix-like systems)
+          if [ "${{ matrix.goos }}" != "windows" ]; then
+            cp bot.sh release/$PACKAGE_NAME/
+            chmod +x release/$PACKAGE_NAME/bot.sh
+          else
+            cp bot.bat release/$PACKAGE_NAME/
+          fi
+          
+          # Copy web folder
+          cp -r web release/$PACKAGE_NAME/
+          
+          # Copy templates folder
+          cp -r templates release/$PACKAGE_NAME/
+          
+          # Copy documentation
+          cp README.md release/$PACKAGE_NAME/ 2>/dev/null || echo "README.md not found"
+          cp API.md release/$PACKAGE_NAME/ 2>/dev/null || echo "API.md not found"
+          cp CLAUDE.md release/$PACKAGE_NAME/ 2>/dev/null || echo "CLAUDE.md not found"
+          
+          # Create sample config
+          cat > release/$PACKAGE_NAME/config.sample.json << 'EOF'
+          {
+            "http_port": ":8080",
+            "https_port": ":443",
+            "cert_file": "",
+            "key_file": "",
+            "domain": "",
+            "email_for_acme": ""
+          }
+          EOF
+          
+          # Create installation guide
+          cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
+          # QyWxBot Server 安装指南
+          
+          ## 快速开始
+          
+          1. 解压文件包
+          2. 复制 `config.sample.json` 为 `config.json` 并根据需要修改配置
+          3. 运行服务器:
+             - Linux/macOS: `./qywxbot_server`
+             - Windows: `qywxbot_server.exe`
+          4. 打开浏览器访问 `http://localhost:8080` 注册机器人
+          
+          ## 文件说明
+          
+          - `qywxbot_server` / `qywxbot_server.exe`: 主服务器程序
+          - `bot.sh` / `bot.bat`: Shell 脚本工具
+          - `web/`: Web 界面文件
+          - `templates/`: HTML 模板文件
+          - `config.sample.json`: 示例配置文件
+          
+          ## 使用文档
+          
+          详细使用说明请参考:
+          - `README.md`: 项目介绍
+          - `API.md`: API 文档
+          - `CLAUDE.md`: 开发文档
+          - `web/index.html`: 在线帮助文档
+          EOF
+          
+          # Create archive based on platform
+          cd release
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            # Create ZIP for Windows
+            zip -r ${PACKAGE_NAME}.zip $PACKAGE_NAME
+          else
+            # Create tar.gz for Unix-like systems
+            tar -czf ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME
+          fi
+
+      - name: Upload server artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: qywxbot-server-${{ matrix.platform }}
+          path: release/qywxbot-server-${{ matrix.platform }}.*
+
+  build-bot:
+    name: Build bot.exe (Windows only)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build bot.exe for Windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64
+          export CC=x86_64-w64-mingw32-gcc
+          
+          # Build bot-cli
+          cd cmd/bot-cli/cmd
+          go build -ldflags="-s -w" -o bot.exe bot-cli.go
+
+      - name: Create bot package
+        run: |
+          PACKAGE_NAME="bot-windows-amd64"
+          mkdir -p release/$PACKAGE_NAME
+          
+          # Copy bot binary
+          cp cmd/bot-cli/cmd/bot.exe release/$PACKAGE_NAME/
+          
+          # Copy Windows batch script
+          cp bot.bat release/$PACKAGE_NAME/
+          
+          # Copy documentation
+          cp README.md release/$PACKAGE_NAME/ 2>/dev/null || echo "README.md not found"
+          cp API.md release/$PACKAGE_NAME/ 2>/dev/null || echo "API.md not found"
+          cp CLAUDE.md release/$PACKAGE_NAME/ 2>/dev/null || echo "CLAUDE.md not found"
+          
+          # Create installation guide for bot
+          cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
+          # QyWxBot 客户端工具安装指南
+          
+          ## 快速开始
+          
+          1. 解压文件包
+          2. 将 `bot.exe` 添加到系统 PATH 环境变量
+          3. 使用命令行工具:
+             ```cmd
+             bot.exe --help
+             ```
+          
+          ## 文件说明
+          
+          - `bot.exe`: 命令行客户端工具
+          - `bot.bat`: Windows 批处理脚本工具
+          
+          ## 使用文档
+          
+          详细使用说明请参考:
+          - `README.md`: 项目介绍
+          - `API.md`: API 文档
+          - `CLAUDE.md`: 开发文档
+          EOF
+          
+          # Create ZIP package
+          cd release
+          zip -r ${PACKAGE_NAME}.zip $PACKAGE_NAME
+
+      - name: Upload bot artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: bot-windows-amd64
+          path: release/bot-windows-amd64.*
+
+  release:
+    name: Create GitHub Release
+    needs: [build-server, build-bot]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "*.tar.gz" -o -name "*.zip" | while read file; do
+            cp "$file" release-assets/
+          done
+          ls -la release-assets/
+
+      - name: Get release version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          # QyWxBot ${{ steps.get_version.outputs.version }}
+          
+          ## 🎉 新版本发布
+          
+          ### 📦 包含内容
+          
+          #### 🖥️ 服务器端 (qywxbot-server-*)
+          - **qywxbot_server**: 主服务器程序
+          - **bot.sh/bot.bat**: Shell 脚本工具
+          - **web/**: 完整 Web 界面
+          - **templates/**: HTML 模板文件
+          - **文档**: 安装和使用指南
+          
+          #### 🔧 客户端工具 (bot-windows-amd64)
+          - **bot.exe**: Windows 命令行客户端工具  
+          - **bot.bat**: Windows 批处理脚本
+          - **文档**: 使用指南
+          
+          ### 🚀 主要特性
+          - ✅ 企业微信机器人管理
+          - ✅ Web 界面注册和管理
+          - ✅ 多平台服务器支持
+          - ✅ Windows 客户端工具
+          - ✅ 文件上传和消息发送
+          - ✅ Fallback 机制确保高可用性
+          - ✅ 完整的 API 文档
+          
+          ### 💻 支持平台
+          
+          #### 服务器端:
+          - 🐧 Linux (AMD64, ARM64)
+          - 🪟 Windows (AMD64)
+          - 🍎 macOS (AMD64, ARM64)
+          
+          #### 客户端工具:
+          - 🪟 Windows (AMD64) - bot.exe
+          
+          ### 📥 下载说明
+          - **服务器端**: 根据平台下载对应的 `qywxbot-server-*` 文件
+          - **客户端工具**: 下载 `bot-windows-amd64.zip`
+          - **Linux/macOS**: 下载 `.tar.gz` 文件
+          - **Windows**: 下载 `.zip` 文件
+          
+          解压后请参考各包内的 `INSTALL.md` 文件进行安装。
+          
+          ---
+          
+          🤖 **自动构建**: 本版本通过 GitHub Actions 自动构建和测试
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: QyWxBot ${{ steps.get_version.outputs.version }}
+          body_path: release_notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
