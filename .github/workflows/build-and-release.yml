@@ -154,7 +154,7 @@ jobs:
           fi
 
       - name: Upload server artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: qywxbot-server-${{ matrix.platform }}
           path: release/qywxbot-server-${{ matrix.platform }}.*
@@ -241,7 +241,7 @@ jobs:
           zip -r ${PACKAGE_NAME}.zip $PACKAGE_NAME
 
       - name: Upload bot artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bot-windows-amd64
           path: release/bot-windows-amd64.*
@@ -257,7 +257,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
