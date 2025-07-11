@@ -74,6 +74,13 @@ jobs:
           
           # Build main server
           go build -ldflags="-s -w" -o qywxbot_server${{ matrix.extension }} main.go
+          
+          # Build bot.exe for Windows server package
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cd cmd/bot-cli/cmd
+            go build -ldflags="-s -w" -o bot.exe bot-cli.go
+            cd ../../../
+          fi
 
       - name: Create server package
         run: |
@@ -89,6 +96,8 @@ jobs:
             chmod +x release/$PACKAGE_NAME/bot.sh
           else
             cp bot.bat release/$PACKAGE_NAME/
+            # Copy bot.exe to Windows server package
+            cp cmd/bot-cli/cmd/bot.exe release/$PACKAGE_NAME/
           fi
           
           # Copy web folder
@@ -115,22 +124,68 @@ jobs:
           EOF
           
           # Create installation guide
-          cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
+          # QyWxBot Server 安装指南 (Windows)
+          
+          ## 快速开始
+          
+          1. 解压文件包
+          2. 复制 `config.sample.json` 为 `config.json` 并根据需要修改配置
+          3. 运行服务器: `qywxbot_server.exe`
+          4. 打开浏览器访问 `http://localhost:8080` 注册机器人
+          
+          ## 文件说明
+          
+          - `qywxbot_server.exe`: 主服务器程序
+          - `bot.exe`: Windows 命令行客户端工具
+          - `bot.bat`: Windows 批处理脚本工具
+          - `web\`: Web 界面文件
+          - `templates\`: HTML 模板文件
+          - `config.sample.json`: 示例配置文件
+          
+          ## 客户端工具使用
+          
+          1. 初始化配置:
+             ```cmd
+             bot.exe init
+             ```
+          
+          2. 发送消息:
+             ```cmd
+             bot.exe send "你的消息"
+             bot.exe sendfile "文件路径"
+             ```
+          
+          3. 使用批处理脚本:
+             ```cmd
+             bot.bat send "你的消息"
+             bot.bat sendfile "文件路径"
+             ```
+          
+          ## 使用文档
+          
+          详细使用说明请参考:
+          - `README.md`: 项目介绍
+          - `API.md`: API 文档
+          - `CLAUDE.md`: 开发文档
+          - `web\index.html`: 在线帮助文档
+          EOF
+          else
+            cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
           # QyWxBot Server 安装指南
           
           ## 快速开始
           
           1. 解压文件包
           2. 复制 `config.sample.json` 为 `config.json` 并根据需要修改配置
-          3. 运行服务器:
-             - Linux: `./qywxbot_server`
-             - Windows: `qywxbot_server.exe`
+          3. 运行服务器: `./qywxbot_server`
           4. 打开浏览器访问 `http://localhost:8080` 注册机器人
           
           ## 文件说明
           
-          - `qywxbot_server` / `qywxbot_server.exe`: 主服务器程序
-          - `bot.sh` / `bot.bat`: Shell 脚本工具
+          - `qywxbot_server`: 主服务器程序
+          - `bot.sh`: Shell 脚本工具
           - `web/`: Web 界面文件
           - `templates/`: HTML 模板文件
           - `config.sample.json`: 示例配置文件
@@ -143,6 +198,7 @@ jobs:
           - `CLAUDE.md`: 开发文档
           - `web/index.html`: 在线帮助文档
           EOF
+          fi
           
           # Create archive based on platform
           cd release
@@ -403,6 +459,7 @@ jobs:
           #### 🖥️ 服务器端 (qywxbot-server-*)
           - **qywxbot_server**: 主服务器程序
           - **bot.sh/bot.bat**: Shell 脚本工具
+          - **bot.exe**: Windows 命令行客户端工具 (仅 Windows 版本)
           - **web/**: 完整 Web 界面
           - **templates/**: HTML 模板文件
           - **文档**: 安装和使用指南
@@ -432,10 +489,16 @@ jobs:
           - 🪟 Windows (AMD64) - bot.exe
           
           ### 📥 下载说明
-          - **服务器端**: 根据平台下载对应的 `qywxbot-server-*` 文件
-          - **客户端工具**: 下载 `bot-windows-amd64.zip`
-          - **Linux/macOS**: 下载 `.tar.gz` 文件
-          - **Windows**: 下载 `.zip` 文件
+          
+          #### 服务器端部署:
+          - **Windows 用户**: 下载 `qywxbot-server-windows-amd64.zip` (包含完整服务器和客户端工具)
+          - **Linux 用户**: 下载对应的 `qywxbot-server-linux-*.tar.gz`
+          - **macOS 用户**: 下载对应的 `qywxbot-server-darwin-*.tar.gz`
+          
+          #### 仅客户端工具:
+          - **Windows 客户端**: 下载 `bot-windows-amd64.zip` (仅包含客户端工具)
+          
+          **注意**: Windows 服务器包已包含 bot.exe，无需单独下载客户端工具包。
           
           解压后请参考各包内的 `INSTALL.md` 文件进行安装。
           
