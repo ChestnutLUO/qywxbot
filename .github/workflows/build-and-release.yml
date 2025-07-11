@@ -12,10 +12,11 @@ on:
         default: 'v1.0.0'
 
 jobs:
-  build-server:
-    name: Build qywxbot_server
+  build-server-unix:
+    name: Build qywxbot_server (Linux/Windows)
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - goos: linux
@@ -28,12 +29,6 @@ jobs:
             goarch: amd64
             platform: windows-amd64
             extension: .exe
-          - goos: darwin
-            goarch: amd64
-            platform: darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            platform: darwin-arm64
 
     steps:
       - name: Checkout code
@@ -122,7 +117,7 @@ jobs:
           1. 解压文件包
           2. 复制 `config.sample.json` 为 `config.json` 并根据需要修改配置
           3. 运行服务器:
-             - Linux/macOS: `./qywxbot_server`
+             - Linux: `./qywxbot_server`
              - Windows: `qywxbot_server.exe`
           4. 打开浏览器访问 `http://localhost:8080` 注册机器人
           
@@ -152,6 +147,117 @@ jobs:
             # Create tar.gz for Unix-like systems
             tar -czf ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME
           fi
+
+      - name: Upload server artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qywxbot-server-${{ matrix.platform }}
+          path: release/qywxbot-server-${{ matrix.platform }}.*
+
+  build-server-macos:
+    name: Build qywxbot_server (macOS)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goarch: amd64
+            platform: darwin-amd64
+          - goarch: arm64
+            platform: darwin-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build qywxbot server
+        env:
+          GOOS: darwin
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+        run: |
+          # Build main server
+          go build -ldflags="-s -w" -o qywxbot_server main.go
+
+      - name: Create server package
+        run: |
+          PACKAGE_NAME="qywxbot-server-${{ matrix.platform }}"
+          mkdir -p release/$PACKAGE_NAME
+          
+          # Copy main server binary
+          cp qywxbot_server release/$PACKAGE_NAME/
+          
+          # Copy shell script for macOS
+          cp bot.sh release/$PACKAGE_NAME/
+          chmod +x release/$PACKAGE_NAME/bot.sh
+          
+          # Copy web folder
+          cp -r web release/$PACKAGE_NAME/
+          
+          # Copy templates folder
+          cp -r templates release/$PACKAGE_NAME/
+          
+          # Copy documentation
+          cp README.md release/$PACKAGE_NAME/ 2>/dev/null || echo "README.md not found"
+          cp API.md release/$PACKAGE_NAME/ 2>/dev/null || echo "API.md not found"
+          cp CLAUDE.md release/$PACKAGE_NAME/ 2>/dev/null || echo "CLAUDE.md not found"
+          
+          # Create sample config
+          cat > release/$PACKAGE_NAME/config.sample.json << 'EOF'
+          {
+            "http_port": ":8080",
+            "https_port": ":443",
+            "cert_file": "",
+            "key_file": "",
+            "domain": "",
+            "email_for_acme": ""
+          }
+          EOF
+          
+          # Create installation guide
+          cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
+          # QyWxBot Server 安装指南 (macOS)
+          
+          ## 快速开始
+          
+          1. 解压文件包
+          2. 复制 `config.sample.json` 为 `config.json` 并根据需要修改配置
+          3. 运行服务器: `./qywxbot_server`
+          4. 打开浏览器访问 `http://localhost:8080` 注册机器人
+          
+          ## 文件说明
+          
+          - `qywxbot_server`: 主服务器程序
+          - `bot.sh`: Shell 脚本工具
+          - `web/`: Web 界面文件
+          - `templates/`: HTML 模板文件
+          - `config.sample.json`: 示例配置文件
+          
+          ## 使用文档
+          
+          详细使用说明请参考:
+          - `README.md`: 项目介绍
+          - `API.md`: API 文档
+          - `CLAUDE.md`: 开发文档
+          - `web/index.html`: 在线帮助文档
+          EOF
+          
+          # Create tar.gz for macOS
+          cd release
+          tar -czf ${PACKAGE_NAME}.tar.gz $PACKAGE_NAME
 
       - name: Upload server artifacts
         uses: actions/upload-artifact@v4
@@ -248,7 +354,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build-server, build-bot]
+    needs: [build-server-unix, build-server-macos, build-bot]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 
