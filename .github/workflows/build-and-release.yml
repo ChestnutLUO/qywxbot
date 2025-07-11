@@ -59,6 +59,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 1
         run: |
+          # Install cross-compilation tools for server builds
           if [ "${{ matrix.goos }}" = "linux" ]; then
             sudo apt-get update
             sudo apt-get install -y gcc-multilib
@@ -75,12 +76,21 @@ jobs:
           # Build main server
           go build -ldflags="-s -w" -o qywxbot_server${{ matrix.extension }} main.go
           
-          # Build bot.exe for Windows server package
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            cd cmd/bot-cli/cmd
+          # Build bot.exe for all server packages (cross-compile to Windows)
+          echo "Building bot.exe for server package..."
+          cd cmd/bot-cli/cmd
+          env GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
             go build -ldflags="-s -w" -o bot.exe bot-cli.go
-            cd ../../../
+          
+          # Verify bot.exe was created
+          if [ -f "bot.exe" ]; then
+            echo "✅ bot.exe compiled successfully ($(du -h bot.exe | cut -f1))"
+            ls -la bot.exe
+          else
+            echo "❌ bot.exe compilation failed"
+            exit 1
           fi
+          cd ../../../
 
       - name: Create server package
         run: |
@@ -90,14 +100,22 @@ jobs:
           # Copy main server binary
           cp qywxbot_server${{ matrix.extension }} release/$PACKAGE_NAME/
           
+          # Copy bot.exe to ALL server packages
+          if [ -f "cmd/bot-cli/cmd/bot.exe" ]; then
+            cp cmd/bot-cli/cmd/bot.exe release/$PACKAGE_NAME/
+            echo "✅ bot.exe copied to $PACKAGE_NAME package"
+            ls -la release/$PACKAGE_NAME/bot.exe
+          else
+            echo "❌ bot.exe not found for copying"
+            exit 1
+          fi
+          
           # Copy shell script (for Unix-like systems)
           if [ "${{ matrix.goos }}" != "windows" ]; then
             cp bot.sh release/$PACKAGE_NAME/
             chmod +x release/$PACKAGE_NAME/bot.sh
           else
             cp bot.bat release/$PACKAGE_NAME/
-            # Copy bot.exe to Windows server package
-            cp cmd/bot-cli/cmd/bot.exe release/$PACKAGE_NAME/
           fi
           
           # Copy web folder
@@ -185,10 +203,33 @@ jobs:
           ## 文件说明
           
           - `qywxbot_server`: 主服务器程序
+          - `bot.exe`: Windows 命令行客户端工具 (可在 Wine 下运行)
           - `bot.sh`: Shell 脚本工具
           - `web/`: Web 界面文件
           - `templates/`: HTML 模板文件
           - `config.sample.json`: 示例配置文件
+          
+          ## 客户端工具使用
+          
+          ### 使用 Shell 脚本 (推荐)
+          ```bash
+          # 发送消息
+          ./bot.sh send "你的消息"
+          ./bot.sh sendfile "文件路径"
+          ```
+          
+          ### 使用 bot.exe (需要 Wine)
+          ```bash
+          # 安装 Wine (如果未安装)
+          sudo apt-get install wine
+          
+          # 初始化配置
+          wine bot.exe init
+          
+          # 发送消息
+          wine bot.exe send "你的消息"
+          wine bot.exe sendfile "文件路径"
+          ```
           
           ## 使用文档
           
@@ -253,6 +294,22 @@ jobs:
         run: |
           # Build main server
           go build -ldflags="-s -w" -o qywxbot_server main.go
+          
+          # Build bot.exe for macOS server package (cross-compile to Windows)
+          echo "Building bot.exe for macOS server package..."
+          cd cmd/bot-cli/cmd
+          env GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
+            go build -ldflags="-s -w" -o bot.exe bot-cli.go
+          
+          # Verify bot.exe was created
+          if [ -f "bot.exe" ]; then
+            echo "✅ bot.exe compiled successfully ($(du -h bot.exe | cut -f1))"
+            ls -la bot.exe
+          else
+            echo "❌ bot.exe compilation failed"
+            exit 1
+          fi
+          cd ../../../
 
       - name: Create server package
         run: |
@@ -261,6 +318,16 @@ jobs:
           
           # Copy main server binary
           cp qywxbot_server release/$PACKAGE_NAME/
+          
+          # Copy bot.exe to macOS server package
+          if [ -f "cmd/bot-cli/cmd/bot.exe" ]; then
+            cp cmd/bot-cli/cmd/bot.exe release/$PACKAGE_NAME/
+            echo "✅ bot.exe copied to $PACKAGE_NAME package"
+            ls -la release/$PACKAGE_NAME/bot.exe
+          else
+            echo "❌ bot.exe not found for copying"
+            exit 1
+          fi
           
           # Copy shell script for macOS
           cp bot.sh release/$PACKAGE_NAME/
@@ -289,7 +356,7 @@ jobs:
           }
           EOF
           
-          # Create installation guide
+          # Create installation guide for macOS
           cat > release/$PACKAGE_NAME/INSTALL.md << 'EOF'
           # QyWxBot Server 安装指南 (macOS)
           
@@ -303,10 +370,33 @@ jobs:
           ## 文件说明
           
           - `qywxbot_server`: 主服务器程序
+          - `bot.exe`: Windows 命令行客户端工具 (可在 Wine 下运行)
           - `bot.sh`: Shell 脚本工具
           - `web/`: Web 界面文件
           - `templates/`: HTML 模板文件
           - `config.sample.json`: 示例配置文件
+          
+          ## 客户端工具使用
+          
+          ### 使用 Shell 脚本 (推荐)
+          ```bash
+          # 发送消息
+          ./bot.sh send "你的消息"
+          ./bot.sh sendfile "文件路径"
+          ```
+          
+          ### 使用 bot.exe (需要 Wine)
+          ```bash
+          # 安装 Wine (如果未安装)
+          brew install wine-stable
+          
+          # 初始化配置
+          wine bot.exe init
+          
+          # 发送消息
+          wine bot.exe send "你的消息"
+          wine bot.exe sendfile "文件路径"
+          ```
           
           ## 使用文档
           
@@ -352,15 +442,20 @@ jobs:
         env:
           GOOS: windows
           GOARCH: amd64
-          CGO_ENABLED: 1
+          CGO_ENABLED: 0
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64
-          export CC=x86_64-w64-mingw32-gcc
-          
           # Build bot-cli
           cd cmd/bot-cli/cmd
           go build -ldflags="-s -w" -o bot.exe bot-cli.go
+          
+          # Verify bot.exe was created
+          if [ -f "bot.exe" ]; then
+            echo "✅ bot.exe compiled successfully ($(du -h bot.exe | cut -f1))"
+            ls -la bot.exe
+          else
+            echo "❌ bot.exe compilation failed"
+            exit 1
+          fi
 
       - name: Create bot package
         run: |
@@ -458,8 +553,8 @@ jobs:
           
           #### 🖥️ 服务器端 (qywxbot-server-*)
           - **qywxbot_server**: 主服务器程序
+          - **bot.exe**: Windows 命令行客户端工具 (所有版本均包含)
           - **bot.sh/bot.bat**: Shell 脚本工具
-          - **bot.exe**: Windows 命令行客户端工具 (仅 Windows 版本)
           - **web/**: 完整 Web 界面
           - **templates/**: HTML 模板文件
           - **文档**: 安装和使用指南
@@ -490,15 +585,17 @@ jobs:
           
           ### 📥 下载说明
           
-          #### 服务器端部署:
-          - **Windows 用户**: 下载 `qywxbot-server-windows-amd64.zip` (包含完整服务器和客户端工具)
-          - **Linux 用户**: 下载对应的 `qywxbot-server-linux-*.tar.gz`
-          - **macOS 用户**: 下载对应的 `qywxbot-server-darwin-*.tar.gz`
+          #### 服务器端部署 (推荐):
+          - **所有平台**: 下载对应的 `qywxbot-server-*` 文件 (均包含 bot.exe)
+          - **Windows**: `qywxbot-server-windows-amd64.zip`
+          - **Linux**: `qywxbot-server-linux-amd64.tar.gz` 或 `qywxbot-server-linux-arm64.tar.gz`
+          - **macOS**: `qywxbot-server-darwin-amd64.tar.gz` 或 `qywxbot-server-darwin-arm64.tar.gz`
           
-          #### 仅客户端工具:
-          - **Windows 客户端**: 下载 `bot-windows-amd64.zip` (仅包含客户端工具)
+          #### 仅客户端工具 (可选):
+          - **Windows 客户端**: `bot-windows-amd64.zip` (仅包含客户端工具)
           
-          **注意**: Windows 服务器包已包含 bot.exe，无需单独下载客户端工具包。
+          **优势**: 服务器包现在包含完整的客户端工具，提供一站式解决方案。
+          **跨平台支持**: Linux/macOS 用户也可以通过 Wine 运行 bot.exe，或使用 bot.sh 脚本。
           
           解压后请参考各包内的 `INSTALL.md` 文件进行安装。
           
