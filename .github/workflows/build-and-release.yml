@@ -11,6 +11,12 @@ on:
         required: true
         default: 'v1.0.0'
 
+# 添加权限配置
+permissions:
+  contents: write
+  actions: read
+  packages: write
+
 jobs:
   build-server-unix:
     name: Build qywxbot_server (Linux/Windows)
@@ -439,7 +445,7 @@ jobs:
           EOF
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           name: QyWxBot ${{ steps.get_version.outputs.version }}
@@ -447,5 +453,5 @@ jobs:
           files: release-assets/*
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
+          make_latest: true
